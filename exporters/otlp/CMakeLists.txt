@@ -161,6 +161,49 @@ if(OTELCPP_INSTALL)
 endif()
 
 #
+# opentelemetry_exporter_otlp_json_mapping
+#
+# Maps SDK data to OTLP/JSON without protobuf. Deliberately depends on the
+# writer facade and the SDK only, so that a build with no OTLP protobuf
+# exporter still gets it, and so that a change here cannot pull protobuf back
+# into a consumer that has shed it.
+#
+
+add_library(
+  opentelemetry_exporter_otlp_json_mapping
+  ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_mapping.cc
+  src/otlp_json_span_recordable.cc src/otlp_json_trace_mapping.cc)
+
+set_target_properties(opentelemetry_exporter_otlp_json_mapping
+                      PROPERTIES EXPORT_NAME otlp_json_mapping)
+set_target_version(opentelemetry_exporter_otlp_json_mapping)
+
+target_include_directories(
+  opentelemetry_exporter_otlp_json_mapping
+  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+         "$<INSTALL_INTERFACE:include>")
+
+target_link_libraries(
+  opentelemetry_exporter_otlp_json_mapping
+  PUBLIC opentelemetry_trace opentelemetry_resources opentelemetry_common
+         opentelemetry_exporter_otlp_json_writer)
+
+if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
+  target_link_libraries(opentelemetry_exporter_otlp_json_mapping
+                        PRIVATE utf8_range::utf8_validity)
+  target_compile_definitions(opentelemetry_exporter_otlp_json_mapping
+                             PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+endif()
+
+if(OTELCPP_INSTALL)
+  opentelemetry_add_pkgconfig(
+    exporter_otlp_json_mapping "OpenTelemetry OTLP - JSON Mapping"
+    "Protobuf-free mapping from SDK data to OTLP/JSON."
+    "opentelemetry_trace opentelemetry_resources opentelemetry_common opentelemetry_exporter_otlp_json_writer"
+  )
+endif()
+
+#
 # opentelemetry_exporter_otlp_json_converter
 #
 
@@ -894,6 +937,7 @@ otel_add_component(
   opentelemetry_proto
   opentelemetry_exporter_otlp_builder_utils
   opentelemetry_exporter_otlp_json_converter
+  opentelemetry_exporter_otlp_json_mapping
   ${OPENTELEMETRY_OTLP_JSON_WRITER_TARGETS}
   FILES_DIRECTORY
   "include/opentelemetry/exporters/otlp"
@@ -1015,6 +1059,26 @@ if(OTELCPP_BUILD_TESTING)
     TARGET otlp_metrics_serialization_test
     TEST_PREFIX exporter.otlp.
     TEST_LIST otlp_metrics_serialization_test)
+
+  # Compares the two mappings through one writer, so it needs a backend to
+  # produce bytes with, and the protobuf path to compare against.
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    add_executable(otlp_json_trace_equivalence_test
+                   test/otlp_json_trace_equivalence_test.cc)
+    target_link_libraries(
+      otlp_json_trace_equivalence_test
+      ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT}
+      opentelemetry_exporter_otlp_json_mapping
+      opentelemetry_exporter_otlp_json_converter
+      opentelemetry_otlp_recordable
+      opentelemetry_exporter_otlp_json_writer
+      protobuf::libprotobuf)
+    gtest_add_tests(
+      TARGET otlp_json_trace_equivalence_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_json_trace_equivalence_test)
+  endif()
 
   if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
     add_executable(otlp_json_writer_nlohmann_test
