@@ -42,6 +42,9 @@
 #  include "opentelemetry/exporters/otlp/otlp_http_log_record_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_http_push_metric_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_http_span_builder.h"
+#  include "opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h"
+#  include "opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h"
+#  include "opentelemetry/exporters/otlp/otlp_json_http_span_builder.h"
 #endif
 
 #ifdef OTEL_HAVE_OTLP_GRPC
@@ -67,10 +70,11 @@
 #  include "opentelemetry/resource_detectors/service_detector_builder.h"
 #endif
 
-static bool opt_help        = false;
-static bool opt_debug       = false;
-static bool opt_test        = false;
-static bool opt_no_registry = false;
+static bool opt_help          = false;
+static bool opt_debug         = false;
+static bool opt_test          = false;
+static bool opt_no_registry   = false;
+static bool opt_json_builders = false;
 static std::string yaml_file_path;
 
 static std::unique_ptr<opentelemetry::sdk::configuration::ConfiguredSdk> sdk;
@@ -213,9 +217,25 @@ ReturnCode InitOtel(const std::string &config_file)
     opentelemetry::exporter::logs::ConsoleLogRecordBuilder::Register(registry.get());
 
 #ifdef OTEL_HAVE_OTLP_HTTP
-    opentelemetry::exporter::otlp::OtlpHttpSpanBuilder::Register(registry.get());
-    opentelemetry::exporter::otlp::OtlpHttpPushMetricBuilder::Register(registry.get());
-    opentelemetry::exporter::otlp::OtlpHttpLogRecordBuilder::Register(registry.get());
+    /*
+     * The protobuf-free OTLP/JSON exporters fill the same registry slots as
+     * the protobuf ones, so an application registers one set or the other.
+     * opt_json_builders picks between them here only so that both can be
+     * covered by functional tests; an application just registers the set it
+     * wants.
+     */
+    if (opt_json_builders)
+    {
+      opentelemetry::exporter::otlp::OtlpJsonHttpSpanBuilder::Register(registry.get());
+      opentelemetry::exporter::otlp::OtlpJsonHttpPushMetricBuilder::Register(registry.get());
+      opentelemetry::exporter::otlp::OtlpJsonHttpLogRecordBuilder::Register(registry.get());
+    }
+    else
+    {
+      opentelemetry::exporter::otlp::OtlpHttpSpanBuilder::Register(registry.get());
+      opentelemetry::exporter::otlp::OtlpHttpPushMetricBuilder::Register(registry.get());
+      opentelemetry::exporter::otlp::OtlpHttpLogRecordBuilder::Register(registry.get());
+    }
 #endif
 
 #ifdef OTEL_HAVE_OTLP_GRPC
@@ -341,7 +361,9 @@ static void usage(std::FILE *out)
       "  --test\n"
       "    Run in test mode\n"
       "  --no-registry\n"
-      "    Run with an empty registry\n";
+      "    Run with an empty registry\n"
+      "  --json-builders\n"
+      "    Register the protobuf-free OTLP/JSON builders instead of the protobuf ones\n";
 
   std::fprintf(out, "%s", msg);
 }
@@ -393,6 +415,14 @@ static int parse_args(int argc, char *argv[])
       remaining_argc--;
       remaining_argv++;
       opt_no_registry = true;
+      continue;
+    }
+
+    if (std::strcmp(*remaining_argv, "--json-builders") == 0)
+    {
+      remaining_argc--;
+      remaining_argv++;
+      opt_json_builders = true;
       continue;
     }
 
