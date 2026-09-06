@@ -45,6 +45,24 @@ Increment the:
   neither protobuf nor a JSON backend, so a consumer can select one without
   either reaching its own translation unit.
 
+* [EXPORTER] Add `OtlpJsonHttpSpanBuilder`, `OtlpJsonHttpPushMetricBuilder` and
+  `OtlpJsonHttpLogRecordBuilder`, in the targets
+  `opentelemetry_exporter_otlp_json_http{,_log,_metric}_builder`, so the
+  protobuf-free exporters can be selected from a configuration file. An
+  application registers them **instead of** the protobuf builders: both fill the
+  same registry slot for a transport and signal, and which one fills it is an
+  application decision made at registration time. A node asking for
+  `encoding: protobuf` is warned about and exported as JSON, since that is the
+  only encoding these exporters produce. The configuration example gains a
+  `--json-builders` flag that registers them.
+
+* [BUILD] `opentelemetry_exporter_otlp_builder_utils` links
+  `opentelemetry_otlp_common` rather than `opentelemetry_otlp_recordable`. It
+  includes no protobuf header and touches no recordable, and the old dependency
+  pulled the protobuf runtime into everything linking it, including the
+  protobuf-free OTLP/JSON builders. Consumers relying on it to supply
+  `opentelemetry_otlp_recordable` transitively must now link that themselves.
+
 * [BUILD] Add `OTELCPP_WITH_JSON_WRITER_NLOHMANN`, which controls whether the
   nlohmann-json `JsonWriter` backend is compiled. It defaults ON whenever an
   OTLP exporter that emits JSON is enabled, so existing builds are unaffected.
