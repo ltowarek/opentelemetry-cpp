@@ -115,6 +115,55 @@ bool_flag(
     build_setting_default = True,
 )
 
+# The reader half of the JSON seam. It rides :with_json_writer_nlohmann
+# rather than a flag of its own, because a separate flag would let a consumer
+# exclude the writer backend and still pull nlohmann in through the reader.
+cc_library(
+    name = "otlp_json_reader",
+    srcs = select({
+        ":json_writer_nlohmann_enabled": ["src/otlp_json_reader_nlohmann.cc"],
+        "//conditions:default": [],
+    }),
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/default_json_reader_factory.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_reader.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_reader_factory.h",
+    ] + select({
+        ":json_writer_nlohmann_enabled": [
+            "include/opentelemetry/exporters/otlp/otlp_json_reader_factory_nlohmann.h",
+        ],
+        "//conditions:default": [],
+    }),
+    defines = select({
+        ":json_writer_nlohmann_enabled": ["ENABLE_JSON_READER_NLOHMANN"],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "include",
+    tags = ["otlp"],
+    deps = [
+        "//api",
+        "//sdk/src/common:global_log_handler",
+    ] + select({
+        ":json_writer_nlohmann_enabled": ["@github_nlohmann_json//:json"],
+        "//conditions:default": [],
+    }),
+)
+
+# The OTLP-aware half of the read side, kept out of :otlp_json_reader so that
+# stays a generic JSON accessor.
+cc_library(
+    name = "otlp_json_partial_success",
+    srcs = ["src/otlp_json_partial_success.cc"],
+    hdrs = ["include/opentelemetry/exporters/otlp/otlp_json_partial_success.h"],
+    strip_include_prefix = "include",
+    tags = ["otlp"],
+    deps = [
+        ":otlp_json_reader",
+        "//api",
+        "//sdk/src/common:global_log_handler",
+    ],
+)
+
 # Maps SDK data to OTLP/JSON without protobuf. Depends on the writer and the
 # SDK only, so a change here cannot pull protobuf back into a consumer that has
 # shed it.
@@ -789,6 +838,33 @@ cc_test(
     ],
     deps = [
         ":otlp_json_writer",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_reader_test",
+    srcs = ["test/otlp_json_reader_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_reader",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_partial_success_test",
+    srcs = ["test/otlp_json_partial_success_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_partial_success",
+        "//test_common:headers",
         "@com_google_googletest//:gtest_main",
     ],
 )

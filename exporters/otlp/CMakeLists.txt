@@ -161,6 +161,109 @@ if(OTELCPP_INSTALL)
 endif()
 
 #
+# opentelemetry_exporter_otlp_json_reader
+#
+# The reader half of the JSON seam, laid out exactly like the writer: a
+# header-only facade plus a selectable backend. It rides
+# OTELCPP_WITH_JSON_WRITER_NLOHMANN rather than an option of its own,
+# because a separate option would let a consumer exclude the writer backend
+# and still pull nlohmann in through the reader.
+#
+
+add_library(opentelemetry_exporter_otlp_json_reader INTERFACE)
+
+set_target_properties(opentelemetry_exporter_otlp_json_reader
+                      PROPERTIES EXPORT_NAME otlp_json_reader)
+
+target_include_directories(
+  opentelemetry_exporter_otlp_json_reader
+  INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+            "$<INSTALL_INTERFACE:include>")
+
+target_link_libraries(opentelemetry_exporter_otlp_json_reader
+                      INTERFACE opentelemetry_common)
+
+set(OPENTELEMETRY_OTLP_JSON_READER_TARGETS
+    opentelemetry_exporter_otlp_json_reader)
+
+if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+  add_library(
+    opentelemetry_exporter_otlp_json_reader_nlohmann
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_reader_nlohmann.cc)
+
+  set_target_properties(opentelemetry_exporter_otlp_json_reader_nlohmann
+                        PROPERTIES EXPORT_NAME otlp_json_reader_nlohmann)
+  set_target_version(opentelemetry_exporter_otlp_json_reader_nlohmann)
+
+  target_include_directories(
+    opentelemetry_exporter_otlp_json_reader_nlohmann
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+           "$<INSTALL_INTERFACE:include>")
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_reader_nlohmann
+    PUBLIC opentelemetry_common
+    PRIVATE opentelemetry_sdk "$<BUILD_INTERFACE:nlohmann_json::nlohmann_json>")
+
+  target_compile_definitions(opentelemetry_exporter_otlp_json_reader_nlohmann
+                             PUBLIC ENABLE_JSON_READER_NLOHMANN)
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_reader
+    INTERFACE opentelemetry_exporter_otlp_json_reader_nlohmann)
+
+  list(APPEND OPENTELEMETRY_OTLP_JSON_READER_TARGETS
+       opentelemetry_exporter_otlp_json_reader_nlohmann)
+endif()
+
+if(OTELCPP_INSTALL)
+  opentelemetry_add_pkgconfig(
+    exporter_otlp_json_reader "OpenTelemetry OTLP - JSON Reader"
+    "Document-shaped JSON reader interface, with an nlohmann-backed default implementation."
+    "opentelemetry_common")
+
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_reader_nlohmann
+      "OpenTelemetry OTLP - JSON Reader (nlohmann backend)"
+      "The nlohmann-json backed default implementation of the JsonReader interface."
+      "opentelemetry_common")
+  endif()
+endif()
+
+#
+# opentelemetry_exporter_otlp_json_partial_success
+#
+# The OTLP-aware half of the read side: what a partial-success response
+# means, kept out of the reader so that stays a generic JSON accessor, the
+# same split the mapping keeps from the writer.
+#
+
+add_library(opentelemetry_exporter_otlp_json_partial_success
+            ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_partial_success.cc)
+
+set_target_properties(opentelemetry_exporter_otlp_json_partial_success
+                      PROPERTIES EXPORT_NAME otlp_json_partial_success)
+set_target_version(opentelemetry_exporter_otlp_json_partial_success)
+
+target_include_directories(
+  opentelemetry_exporter_otlp_json_partial_success
+  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+         "$<INSTALL_INTERFACE:include>")
+
+target_link_libraries(
+  opentelemetry_exporter_otlp_json_partial_success
+  PUBLIC opentelemetry_common opentelemetry_exporter_otlp_json_reader
+  PRIVATE opentelemetry_sdk)
+
+if(OTELCPP_INSTALL)
+  opentelemetry_add_pkgconfig(
+    exporter_otlp_json_partial_success "OpenTelemetry OTLP - JSON Partial Success"
+    "Protobuf-free parsing of OTLP/JSON export responses."
+    "opentelemetry_common opentelemetry_exporter_otlp_json_reader")
+endif()
+
+#
 # opentelemetry_exporter_otlp_json_mapping
 #
 # Maps SDK data to OTLP/JSON without protobuf. Deliberately depends on the
@@ -945,6 +1048,8 @@ otel_add_component(
   opentelemetry_exporter_otlp_json_converter
   opentelemetry_exporter_otlp_json_mapping
   ${OPENTELEMETRY_OTLP_JSON_WRITER_TARGETS}
+  ${OPENTELEMETRY_OTLP_JSON_READER_TARGETS}
+  opentelemetry_exporter_otlp_json_partial_success
   FILES_DIRECTORY
   "include/opentelemetry/exporters/otlp"
   FILES_DESTINATION
@@ -1128,6 +1233,26 @@ if(OTELCPP_BUILD_TESTING)
       TARGET otlp_json_writer_nlohmann_test
       TEST_PREFIX exporter.otlp.
       TEST_LIST otlp_json_writer_nlohmann_test)
+
+    add_executable(otlp_json_reader_test test/otlp_json_reader_test.cc)
+    target_link_libraries(
+      otlp_json_reader_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
+      opentelemetry_exporter_otlp_json_reader)
+    gtest_add_tests(
+      TARGET otlp_json_reader_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_json_reader_test)
+
+    add_executable(otlp_json_partial_success_test
+                   test/otlp_json_partial_success_test.cc)
+    target_link_libraries(
+      otlp_json_partial_success_test ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_exporter_otlp_json_partial_success
+      opentelemetry_sdk opentelemetry_test_common)
+    gtest_add_tests(
+      TARGET otlp_json_partial_success_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_json_partial_success_test)
   endif()
 
   if(OTELCPP_WITH_OTLP_GRPC)
