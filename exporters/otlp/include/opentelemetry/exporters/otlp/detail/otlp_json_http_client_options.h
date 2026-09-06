@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <utility>
 
@@ -50,6 +51,23 @@ OtlpHttpClientOptions MakeOtlpJsonHttpClientOptions(const ExporterOptions &optio
 #endif
   );
   return client_options;
+}
+
+/**
+ * How many requests the exporter lets run at once, which is 0 -- meaning
+ * export synchronously -- unless the asynchronous preview is compiled in. The
+ * option carrying it only exists under that flag, so reading it is guarded
+ * once here rather than in each exporter.
+ */
+template <typename ExporterOptions>
+std::size_t MaxRunningRequests(const ExporterOptions &options) noexcept
+{
+#ifdef ENABLE_ASYNC_EXPORT
+  return options.max_concurrent_requests;
+#else
+  static_cast<void>(options);
+  return 0;
+#endif
 }
 
 }  // namespace detail
