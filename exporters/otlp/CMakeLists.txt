@@ -773,6 +773,72 @@ if(OTELCPP_WITH_OTLP_HTTP)
        opentelemetry_exporter_otlp_json_http_metric)
 
   #
+  # opentelemetry_exporter_otlp_json_http_builder
+  #
+  # The file-configuration path for the protobuf-free exporters. An
+  # application registers these instead of the protobuf builders, so they are
+  # separate targets rather than sources of the exporter libraries: linking an
+  # exporter must not decide which builder fills the registry slot.
+  #
+
+  add_library(opentelemetry_exporter_otlp_json_http_builder
+              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
+
+  set_target_properties(opentelemetry_exporter_otlp_json_http_builder
+                        PROPERTIES EXPORT_NAME otlp_json_http_exporter_builder)
+  set_target_version(opentelemetry_exporter_otlp_json_http_builder)
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_http_builder
+    PUBLIC opentelemetry_exporter_otlp_json_http
+    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+
+  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+       opentelemetry_exporter_otlp_json_http_builder)
+
+  #
+  # opentelemetry_exporter_otlp_json_http_log_builder
+  #
+
+  add_library(
+    opentelemetry_exporter_otlp_json_http_log_builder
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_builder.cc)
+
+  set_target_properties(
+    opentelemetry_exporter_otlp_json_http_log_builder
+    PROPERTIES EXPORT_NAME otlp_json_http_log_record_exporter_builder)
+  set_target_version(opentelemetry_exporter_otlp_json_http_log_builder)
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_http_log_builder
+    PUBLIC opentelemetry_exporter_otlp_json_http_log
+    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+
+  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+       opentelemetry_exporter_otlp_json_http_log_builder)
+
+  #
+  # opentelemetry_exporter_otlp_json_http_metric_builder
+  #
+
+  add_library(
+    opentelemetry_exporter_otlp_json_http_metric_builder
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_push_metric_builder.cc)
+
+  set_target_properties(
+    opentelemetry_exporter_otlp_json_http_metric_builder
+    PROPERTIES EXPORT_NAME otlp_json_http_metric_exporter_builder)
+  set_target_version(opentelemetry_exporter_otlp_json_http_metric_builder)
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_http_metric_builder
+    PUBLIC opentelemetry_exporter_otlp_json_http_metric
+    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+
+  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+       opentelemetry_exporter_otlp_json_http_metric_builder)
+
+  #
   # opentelemetry_exporter_otlp_http
   #
 
@@ -1516,6 +1582,21 @@ if(OTELCPP_BUILD_TESTING)
     # the target list is what proves these exporters need no protobuf, so do
     # not add protobuf::libprotobuf here to fix a link error.
     if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+      add_executable(otlp_json_http_builder_test test/otlp_json_http_builder_test.cc)
+      target_link_libraries(
+        otlp_json_http_builder_test
+        ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${GMOCK_LIB}
+        opentelemetry_exporter_otlp_json_http_builder
+        opentelemetry_exporter_otlp_json_http_log_builder
+        opentelemetry_exporter_otlp_json_http_metric_builder
+        opentelemetry_test_common)
+      gtest_add_tests(
+        TARGET otlp_json_http_builder_test
+        TEST_PREFIX exporter.otlp.
+        TEST_LIST otlp_json_http_builder_test)
+
       # test name -> the single-signal library it exercises
       set(_json_http_tests
           otlp_json_http_exporter_test opentelemetry_exporter_otlp_json_http

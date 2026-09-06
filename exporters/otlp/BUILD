@@ -588,6 +588,66 @@ cc_library(
 )
 
 cc_library(
+    name = "otlp_json_http_span_exporter_builder",
+    srcs = [
+        "src/otlp_json_http_span_builder.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_http_builder_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_span_builder.h",
+    ],
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http",
+    ],
+    deps = [
+        ":otlp_builder_utils",
+        ":otlp_json_http_exporter",
+    ],
+)
+
+cc_library(
+    name = "otlp_json_http_metric_exporter_builder",
+    srcs = [
+        "src/otlp_json_http_push_metric_builder.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_http_builder_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h",
+    ],
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http",
+    ],
+    deps = [
+        ":otlp_builder_utils",
+        ":otlp_json_http_metric_exporter",
+    ],
+)
+
+cc_library(
+    name = "otlp_json_http_log_record_exporter_builder",
+    srcs = [
+        "src/otlp_json_http_log_record_builder.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_http_builder_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h",
+    ],
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http_log",
+    ],
+    deps = [
+        ":otlp_builder_utils",
+        ":otlp_json_http_log_record_exporter",
+    ],
+)
+
+cc_library(
     name = "otlp_http_span_exporter_builder",
     srcs = [
         "src/otlp_http_span_builder.cc",
@@ -1036,6 +1096,22 @@ cc_test(
     deps = [
         ":otlp_json_partial_success",
         "//test_common:headers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_http_builder_test",
+    srcs = ["test/otlp_json_http_builder_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_log_record_exporter_builder",
+        ":otlp_json_http_metric_exporter_builder",
+        ":otlp_json_http_span_exporter_builder",
+        "//test_common/src:test_common",
         "@com_google_googletest//:gtest_main",
     ],
 )
