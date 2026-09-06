@@ -31,21 +31,16 @@ static constexpr const char *kLinkAttributeCountLimitEnv  = "OTEL_LINK_ATTRIBUTE
 namespace
 {
 
-void UpdateFromEnv(const char *env_var_name, std::uint32_t &limit)
+// One template rather than a std::uint32_t and a std::size_t overload: on a
+// 32-bit target whose toolchain spells both as unsigned int, those two
+// overloads are the same function and the file does not compile.
+template <typename Limit>
+void UpdateFromEnv(const char *env_var_name, Limit &limit)
 {
   std::uint32_t value{};
   if (opentelemetry::sdk::common::GetUintEnvironmentVariable(env_var_name, value))
   {
-    limit = value;
-  }
-}
-
-void UpdateFromEnv(const char *env_var_name, std::size_t &limit)
-{
-  std::uint32_t value{};
-  if (opentelemetry::sdk::common::GetUintEnvironmentVariable(env_var_name, value))
-  {
-    limit = static_cast<std::size_t>(value);
+    limit = static_cast<Limit>(value);
   }
 }
 
