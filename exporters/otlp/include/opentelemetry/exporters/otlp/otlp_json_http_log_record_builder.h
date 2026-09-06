@@ -25,16 +25,8 @@ namespace otlp
 {
 
 /**
- * Builds the protobuf-free OTLP/JSON exporter from an `otlp_http`
- * configuration node.
- *
- * An application registers this **instead of** OtlpHttpLogRecordBuilder, not alongside it:
- * both fill the one registry slot for this transport and signal, and which
- * implementation fills it is an application decision made at registration
- * time, the same way HTTP, gRPC and file are chosen today.
- *
- * `encoding: protobuf` is warned about and then exported as JSON, because that
- * is the only thing this exporter can do. See MakeOtlpJsonHttpExporterOptions.
+ * Registered *instead of* OtlpHttpLogRecordBuilder, not alongside it: both fill the
+ * one registry slot for this transport and signal.
  */
 class OPENTELEMETRY_EXPORT OtlpJsonHttpLogRecordBuilder
     : public opentelemetry::sdk::configuration::OtlpHttpLogRecordExporterBuilder

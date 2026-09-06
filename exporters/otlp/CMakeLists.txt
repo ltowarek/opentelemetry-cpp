@@ -780,11 +780,6 @@ if(OTELCPP_WITH_OTLP_HTTP)
   #
   # opentelemetry_exporter_otlp_json_http_builder
   #
-  # The file-configuration path for the protobuf-free exporters. An
-  # application registers these instead of the protobuf builders, so they are
-  # separate targets rather than sources of the exporter libraries: linking an
-  # exporter must not decide which builder fills the registry slot.
-  #
 
   add_library(opentelemetry_exporter_otlp_json_http_builder
               ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
@@ -1033,6 +1028,55 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "OpenTelemetry OTLP - HTTP Metric Builder"
       "Builder for OTLP HTTP metric exporter."
       "opentelemetry_exporter_otlp_http_metric opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_client
+      "OpenTelemetry OTLP - JSON HTTP Client"
+      "Shared send path for the protobuf-free OTLP/JSON exporters."
+      "opentelemetry_exporter_otlp_http_transport opentelemetry_exporter_otlp_json_partial_success opentelemetry_exporter_otlp_json_reader"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http
+      "OpenTelemetry OTLP - JSON HTTP Span Exporter"
+      "Exports trace spans as OTLP/JSON via HTTP, without protobuf."
+      "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_builder
+      "OpenTelemetry OTLP - JSON HTTP Span Builder"
+      "Builder for the protobuf-free OTLP/JSON HTTP span exporter."
+      "opentelemetry_exporter_otlp_json_http opentelemetry_exporter_otlp_builder_utils"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_log
+      "OpenTelemetry OTLP - JSON HTTP Log Exporter"
+      "Exports log records as OTLP/JSON via HTTP, without protobuf."
+      "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_log_builder
+      "OpenTelemetry OTLP - JSON HTTP Log Builder"
+      "Builder for the protobuf-free OTLP/JSON HTTP log record exporter."
+      "opentelemetry_exporter_otlp_json_http_log opentelemetry_exporter_otlp_builder_utils"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_metric
+      "OpenTelemetry OTLP - JSON HTTP Metric Exporter"
+      "Exports metrics as OTLP/JSON via HTTP, without protobuf."
+      "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
+    )
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_http_metric_builder
+      "OpenTelemetry OTLP - JSON HTTP Metric Builder"
+      "Builder for the protobuf-free OTLP/JSON HTTP metric exporter."
+      "opentelemetry_exporter_otlp_json_http_metric opentelemetry_exporter_otlp_builder_utils"
     )
   endif()
 

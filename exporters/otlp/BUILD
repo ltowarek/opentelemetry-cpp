@@ -234,7 +234,6 @@ cc_library(
         ":otlp_common",
         "//sdk/src/common:global_log_handler",
         "//sdk/src/configuration:configuration_core",
-        ":otlp_http_exporter_options",
         "//sdk:headers",
     ],
 )
