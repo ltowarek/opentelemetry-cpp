@@ -56,6 +56,17 @@ Increment the:
   reflection-based converter emits `{"arrayValue":null}`, because the
   `ArrayValue` it creates has no field set, and the two paths now agree.
 
+* [EXPORTER] Add a protobuf-free read side for OTLP/JSON export responses: a
+  `JsonReader` interface with an nlohmann-backed default behind
+  `JsonReaderFactory`, in the new `opentelemetry_exporter_otlp_json_reader`
+  target, plus partial-success parsing and logging for all three signals in
+  `opentelemetry_exporter_otlp_json_partial_success`. The reader is document-shaped
+  where `JsonWriter` is token-shaped, because a response carries only a
+  rejected count and an error message. It shares
+  `OTELCPP_WITH_JSON_WRITER_NLOHMANN` with the writer, since it shares the
+  backend library. Nothing calls it yet; `OtlpHttpClient` still parses
+  responses with protobuf.
+
 * [EXPORTER] Add a `JsonWriter` token interface for OTLP/JSON serialization,
   with an nlohmann-json backend behind the new
   `OTELCPP_WITH_JSON_WRITER_NLOHMANN` option, and route the OTLP HTTP and file
