@@ -12,19 +12,19 @@ endif()
 
 # The protobuf-free exporters ship in this component alongside the protobuf
 # ones, so "protobuf::libprotobuf is not defined" cannot be the assertion --
-# the component requires it for the protobuf exporters. What is checkable, and
-# is the actual claim, is that no protobuf reaches the JSON targets through
-# their exported link interface. A future edit that reintroduces it fails here
-# rather than silently in a consumer's binary.
+# the component requires it for the protobuf exporters. What is checkable is
+# that no protobuf reaches the JSON targets through their exported link
+# interface.
+#
+# This inspects the interface only. A PRIVATE dependency of a shared library is
+# not part of it, so in a BUILD_SHARED_LIBS build this proves what a consumer
+# links, not what the library itself was built against.
 function(otel_assert_link_closure_has_no_protobuf _root)
   set(_pending "${_root}")
   set(_seen "")
 
   while(_pending)
     list(POP_FRONT _pending _current)
-
-    # Unwrap $<LINK_ONLY:target> and friends to reach the target name.
-    string(REGEX REPLACE "^\\$<[A-Z_]+:(.*)>$" "\\1" _current "${_current}")
 
     if(_current IN_LIST _seen)
       continue()
@@ -38,12 +38,23 @@ function(otel_assert_link_closure_has_no_protobuf _root)
       )
     endif()
 
-    if(TARGET ${_current})
-      get_target_property(_libs ${_current} INTERFACE_LINK_LIBRARIES)
-      if(_libs)
-        list(APPEND _pending ${_libs})
-      endif()
+    # An entry may be a bare target, or a target wrapped in one or more
+    # generator expressions. Pull every target-looking name out of it rather
+    # than trying to strip the wrappers, which nest.
+    set(_candidates "${_current}")
+    string(REGEX MATCHALL "[A-Za-z0-9_:.+-]+" _names "${_current}")
+    if(_names)
+      list(APPEND _candidates ${_names})
     endif()
+
+    foreach(_candidate IN LISTS _candidates)
+      if(TARGET ${_candidate})
+        get_target_property(_libs ${_candidate} INTERFACE_LINK_LIBRARIES)
+        if(_libs)
+          list(APPEND _pending ${_libs})
+        endif()
+      endif()
+    endforeach()
   endwhile()
 endfunction()
 

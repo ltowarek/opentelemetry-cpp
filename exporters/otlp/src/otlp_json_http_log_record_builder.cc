@@ -7,10 +7,8 @@
 #include <utility>
 
 #include "opentelemetry/exporters/otlp/detail/otlp_json_http_builder_options.h"
-#include "opentelemetry/exporters/otlp/otlp_builder_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_http_log_record_exporter_options.h"
 #include "opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter_factory.h"
-#include "opentelemetry/sdk/common/global_log_handler.h"
 #include "opentelemetry/sdk/configuration/otlp_http_log_record_exporter_builder.h"
 #include "opentelemetry/sdk/configuration/otlp_http_log_record_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/registry.h"
@@ -32,8 +30,7 @@ void OtlpJsonHttpLogRecordBuilder::Register(opentelemetry::sdk::configuration::R
 std::unique_ptr<opentelemetry::sdk::logs::LogRecordExporter> OtlpJsonHttpLogRecordBuilder::Build(
     const opentelemetry::sdk::configuration::OtlpHttpLogRecordExporterConfiguration *model) const
 {
-  auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpLogRecordExporterOptions>(
-      *model, "[Otlp Json Http Exporter]");
+  auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpLogRecordExporterOptions>(*model);
 
   return OtlpJsonHttpLogRecordExporterFactory::Create(options);
 }
