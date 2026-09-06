@@ -712,7 +712,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
   #
 
   add_library(opentelemetry_exporter_otlp_json_http
-              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_exporter.cc)
+              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_exporter.cc
+              src/otlp_json_http_exporter_factory.cc)
 
   set_target_properties(opentelemetry_exporter_otlp_json_http
                         PROPERTIES EXPORT_NAME otlp_json_http_exporter)
@@ -732,7 +733,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   add_library(
     opentelemetry_exporter_otlp_json_http_log
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_exporter.cc)
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_exporter.cc
+    src/otlp_json_http_log_record_exporter_factory.cc)
 
   set_target_properties(
     opentelemetry_exporter_otlp_json_http_log
@@ -754,7 +756,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   add_library(
     opentelemetry_exporter_otlp_json_http_metric
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_metric_exporter.cc)
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_metric_exporter.cc
+    src/otlp_json_http_metric_exporter_factory.cc)
 
   set_target_properties(opentelemetry_exporter_otlp_json_http_metric
                         PROPERTIES EXPORT_NAME otlp_json_http_metric_exporter)
@@ -1513,23 +1516,31 @@ if(OTELCPP_BUILD_TESTING)
     # the target list is what proves these exporters need no protobuf, so do
     # not add protobuf::libprotobuf here to fix a link error.
     if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
-      foreach(_json_http_test otlp_json_http_exporter_test
-                              otlp_json_http_log_record_exporter_test
-                              otlp_json_http_metric_exporter_test)
-        string(REPLACE "_test" "" _json_http_signal ${_json_http_test})
-        string(REPLACE "otlp_json_http_exporter" "opentelemetry_exporter_otlp_json_http"
-                       _json_http_lib ${_json_http_signal})
-        string(REPLACE "otlp_json_http_log_record_exporter"
-                       "opentelemetry_exporter_otlp_json_http_log" _json_http_lib
-                       ${_json_http_lib})
-        string(REPLACE "otlp_json_http_metric_exporter"
-                       "opentelemetry_exporter_otlp_json_http_metric" _json_http_lib
-                       ${_json_http_lib})
+      # test name -> the single-signal library it exercises
+      set(_json_http_tests
+          otlp_json_http_exporter_test opentelemetry_exporter_otlp_json_http
+          otlp_json_http_exporter_factory_test opentelemetry_exporter_otlp_json_http
+          otlp_json_http_log_record_exporter_test
+          opentelemetry_exporter_otlp_json_http_log
+          otlp_json_http_log_record_exporter_factory_test
+          opentelemetry_exporter_otlp_json_http_log
+          otlp_json_http_metric_exporter_test
+          opentelemetry_exporter_otlp_json_http_metric
+          otlp_json_http_metric_exporter_factory_test
+          opentelemetry_exporter_otlp_json_http_metric)
+
+      list(LENGTH _json_http_tests _json_http_tests_length)
+      math(EXPR _json_http_last "${_json_http_tests_length} - 1")
+      foreach(_i RANGE 0 ${_json_http_last} 2)
+        list(GET _json_http_tests ${_i} _json_http_test)
+        math(EXPR _j "${_i} + 1")
+        list(GET _json_http_tests ${_j} _json_http_lib)
+
         add_executable(${_json_http_test} test/${_json_http_test}.cc)
         target_link_libraries(
           ${_json_http_test} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-          ${GMOCK_LIB} ${_json_http_lib}
-          opentelemetry_http_client_nosend opentelemetry_test_common)
+          ${GMOCK_LIB} ${_json_http_lib} opentelemetry_http_client_nosend
+          opentelemetry_test_common)
         if(WIN32)
           target_link_libraries(${_json_http_test} ws2_32)
         endif()

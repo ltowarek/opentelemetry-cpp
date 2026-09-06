@@ -41,6 +41,9 @@ Increment the:
   selectors move to an inline `detail/otlp_aggregation_temporality.h` that
   `OtlpMetricUtils` now delegates to, so the two metric exporters cannot
   disagree about what a collector receives.
+  Each exporter ships an `OtlpJson*ExporterFactory`, whose header pulls in
+  neither protobuf nor a JSON backend, so a consumer can select one without
+  either reaching its own translation unit.
 
 * [BUILD] Add `OTELCPP_WITH_JSON_WRITER_NLOHMANN`, which controls whether the
   nlohmann-json `JsonWriter` backend is compiled. It defaults ON whenever an
