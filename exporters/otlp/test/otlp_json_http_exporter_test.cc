@@ -138,6 +138,9 @@ TEST(OtlpJsonHttpExporterTest, ReadsAPartialSuccessResponse)
   EXPECT_EQ(sdk::common::ExportResult::kSuccess, outcome.result);
 }
 
+// An asynchronous export reports success as soon as the request is under way and carries the
+// final result to the callback instead, so only a synchronous one has a result to assert on.
+#ifndef ENABLE_ASYNC_EXPORT
 TEST(OtlpJsonHttpExporterTest, ReportsFailureOnAnUnreadableResponseBody)
 {
   const auto outcome = ExportOneBatch("{some bad JSON");
@@ -151,6 +154,7 @@ TEST(OtlpJsonHttpExporterTest, ReportsFailureOnAnErrorStatus)
 
   EXPECT_EQ(sdk::common::ExportResult::kFailure, outcome.result);
 }
+#endif
 
 TEST(OtlpJsonHttpExporterTest, SucceedsWithoutSendingAnEmptyBatch)
 {

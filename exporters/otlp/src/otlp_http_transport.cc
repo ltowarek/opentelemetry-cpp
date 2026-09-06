@@ -317,11 +317,19 @@ public:
     owner_   = nullptr;
     session_ = nullptr;
 
+    // A failure event and a response can race to unbind, and the loser may still be inside
+    // OnResponse assigning body_, so take the body under the same lock that guards writing it.
+    http_client::Body body;
+    {
+      std::unique_lock<std::mutex> lk(mutex_);
+      body = std::move(body_);
+    }
+
     // Run the callback before releasing the session, so whatever its closure owns outlives
     // the response the callback is reading.
     if (callback)
     {
-      callback(result, body_);
+      callback(result, body);
     }
 
     if (nullptr != owner && nullptr != session)
