@@ -15,6 +15,33 @@ Increment the:
 
 ## [Unreleased]
 
+* [EXPORTER] Extract the transport core of `OtlpHttpClient` into a
+  protobuf-free `detail::OtlpHttpTransport`, in the new
+  `opentelemetry_exporter_otlp_http_transport` target, which does not link
+  protobuf. It takes a finished request body and a content type, and hands the
+  raw response bytes to a completion callback. `OtlpHttpClient` keeps its exact
+  public signature and delegates; its response parsing, and the arena owning the
+  response, move into the callback it supplies, so the per-session bookkeeping
+  drops both protobuf fields. No call site changes and the request bytes are
+  unchanged in both encodings. The three exporter option structs move to their
+  own `opentelemetry_exporter_otlp_http_options` target, so the protobuf and
+  protobuf-free exporter of a signal can both use them.
+
+* [EXPORTER] Add protobuf-free OTLP/JSON exporters for all three signals:
+  `OtlpJsonHttpExporter`, `OtlpJsonHttpLogRecordExporter` and
+  `OtlpJsonHttpMetricExporter`, in the per-signal targets
+  `opentelemetry_exporter_otlp_json_http`, `..._json_http_log` and
+  `..._json_http_metric`, sharing `opentelemetry_exporter_otlp_json_http_client`.
+  They convert through the `JsonWriter` seam, post through `OtlpHttpTransport`
+  and read partial-success responses through the `JsonReader` seam, so none of
+  them links protobuf -- which their test targets enforce by linking the
+  exporters and the no-send HTTP client and nothing else. Each exporter has a
+  constructor taking both JSON factories, so it builds with
+  `OTELCPP_WITH_JSON_WRITER_NLOHMANN` off. The metric aggregation temporality
+  selectors move to an inline `detail/otlp_aggregation_temporality.h` that
+  `OtlpMetricUtils` now delegates to, so the two metric exporters cannot
+  disagree about what a collector receives.
+
 * [BUILD] Add `OTELCPP_WITH_JSON_WRITER_NLOHMANN`, which controls whether the
   nlohmann-json `JsonWriter` backend is compiled. It defaults ON whenever an
   OTLP exporter that emits JSON is enabled, so existing builds are unaffected.

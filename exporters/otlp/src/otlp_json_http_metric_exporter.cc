@@ -11,10 +11,10 @@
 
 #include "opentelemetry/exporters/otlp/detail/default_json_reader_factory.h"
 #include "opentelemetry/exporters/otlp/detail/default_json_writer_factory.h"
+#include "opentelemetry/exporters/otlp/detail/otlp_aggregation_temporality.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_http_transport.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_json_http_send.h"
-#include "opentelemetry/exporters/otlp/otlp_aggregation_temporality.h"
 #include "opentelemetry/exporters/otlp/otlp_http_metric_exporter_options.h"
 #include "opentelemetry/exporters/otlp/otlp_http_metric_exporter_runtime_options.h"
 #include "opentelemetry/exporters/otlp/otlp_json_metric_mapping.h"
@@ -76,7 +76,7 @@ OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
       json_writer_factory_(json_writer_factory),
       json_reader_factory_(json_reader_factory),
       aggregation_temporality_selector_(
-          ChooseAggregationTemporalitySelector(options_.aggregation_temporality))
+          detail::ChooseAggregationTemporalitySelector(options_.aggregation_temporality))
 {}
 
 OtlpJsonHttpMetricExporter::~OtlpJsonHttpMetricExporter() = default;
@@ -114,15 +114,9 @@ opentelemetry::sdk::common::ExportResult OtlpJsonHttpMetricExporter::Export(
     return opentelemetry::sdk::common::ExportResult::kFailure;
   }
 
-#ifdef ENABLE_ASYNC_EXPORT
-  const std::size_t max_running_requests = options_.max_concurrent_requests;
-#else
-  const std::size_t max_running_requests = 0;
-#endif
-
-  return detail::SendOtlpJsonRequest(*transport_, json_reader_factory_,
-                                     OtlpMetricPartialSuccessSignal(), json_writer->ToString(),
-                                     data.scope_metric_data_.size(), max_running_requests);
+  return detail::SendOtlpJsonRequest(
+      *transport_, json_reader_factory_, OtlpMetricPartialSuccessSignal(), json_writer->ToString(),
+      data.scope_metric_data_.size(), detail::MaxRunningRequests(options_));
 }
 
 bool OtlpJsonHttpMetricExporter::ForceFlush(std::chrono::microseconds timeout) noexcept

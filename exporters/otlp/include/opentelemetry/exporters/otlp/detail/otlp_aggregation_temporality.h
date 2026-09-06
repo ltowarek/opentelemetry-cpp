@@ -12,6 +12,8 @@ namespace exporter
 {
 namespace otlp
 {
+namespace detail
+{
 
 /**
  * How a metric exporter's configured preference turns into the temporality it
@@ -25,7 +27,9 @@ namespace otlp
  * what the collector receives.
  *
  * Inline rather than a library so that neither side takes a link dependency on
- * the other to ask the question.
+ * the other to ask the question, and under detail/ because it is that sharing
+ * mechanism rather than API: unpublishing a header is harder than promoting
+ * one.
  */
 
 inline sdk::metrics::AggregationTemporality SelectDeltaTemporality(
@@ -84,6 +88,7 @@ inline sdk::metrics::AggregationTemporalitySelector ChooseAggregationTemporality
   return SelectLowMemoryTemporality;
 }
 
+}  // namespace detail
 }  // namespace otlp
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE

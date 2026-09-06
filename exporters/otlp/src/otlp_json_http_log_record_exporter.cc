@@ -116,15 +116,9 @@ opentelemetry::sdk::common::ExportResult OtlpJsonHttpLogRecordExporter::Export(
     return opentelemetry::sdk::common::ExportResult::kFailure;
   }
 
-#ifdef ENABLE_ASYNC_EXPORT
-  const std::size_t max_running_requests = options_.max_concurrent_requests;
-#else
-  const std::size_t max_running_requests = 0;
-#endif
-
   return detail::SendOtlpJsonRequest(*transport_, json_reader_factory_,
                                      OtlpLogPartialSuccessSignal(), json_writer->ToString(),
-                                     records.size(), max_running_requests);
+                                     records.size(), detail::MaxRunningRequests(options_));
 }
 
 bool OtlpJsonHttpLogRecordExporter::ForceFlush(std::chrono::microseconds timeout) noexcept
