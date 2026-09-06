@@ -171,9 +171,11 @@ endif()
 
 add_library(
   opentelemetry_exporter_otlp_json_mapping
-  ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_mapping.cc
-  src/otlp_json_span_recordable.cc src/otlp_json_trace_mapping.cc
-  src/otlp_json_metric_mapping.cc)
+  ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+  src/otlp_json_mapping.cc
+  src/otlp_json_metric_mapping.cc
+  src/otlp_json_span_recordable.cc
+  src/otlp_json_trace_mapping.cc)
 
 set_target_properties(opentelemetry_exporter_otlp_json_mapping
                       PROPERTIES EXPORT_NAME otlp_json_mapping)

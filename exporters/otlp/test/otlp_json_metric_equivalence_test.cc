@@ -170,12 +170,23 @@ TEST(OtlpJsonMetricEquivalence, NullScopeIsSkipped)
   ExpectSameEncoding(data);
 }
 
-TEST(OtlpJsonMetricEquivalence, DroppedAggregationLeavesNoData)
+TEST(OtlpJsonMetricEquivalence, NoPointsLeavesNoData)
 {
   // No points at all: the instrument's identity is on the wire, the oneof is
   // not.
   auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kCounter),
                                     metric_sdk::AggregationTemporality::kDelta);
+  ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
+}
+
+TEST(OtlpJsonMetricEquivalence, DropPointLeavesNoData)
+{
+  // A point of the dropped kind, as distinct from no points: the oneof stays
+  // unset either way.
+  auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kCounter),
+                                    metric_sdk::AggregationTemporality::kDelta);
+  metric_data.point_data_attr_.push_back(
+      metric_sdk::PointDataAttributes{MakePointAttributes(), metric_sdk::DropPointData{}});
   ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
 }
 
@@ -366,9 +377,112 @@ TEST(OtlpJsonMetricEquivalence, SeveralScopes)
   sum_point.value_ = static_cast<std::int64_t>(11);
   counter.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, sum_point});
 
+  // The second scope carries a metric of its own, so the assertion is on
+  // which metric nests under which scope, not merely on both being present.
+  auto other_counter = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kUpDownCounter),
+                                      metric_sdk::AggregationTemporality::kCumulative);
+  other_counter.instrument_descriptor.name_ = "other_metric";
+  metric_sdk::SumPointData other_point;
+  other_point.value_ = static_cast<std::int64_t>(-4);
+  other_counter.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, other_point});
+
   metric_sdk::ResourceMetrics data = MakeResourceMetrics({std::move(counter)});
   data.scope_metric_data_.push_back(
-      metric_sdk::ScopeMetrics{other_scope.get(), std::vector<metric_sdk::MetricData>{}});
+      metric_sdk::ScopeMetrics{other_scope.get(), std::move(other_counter)});
+  ExpectSameEncoding(data);
+}
+
+TEST(OtlpJsonMetricEquivalence, SeveralPointsInOneSum)
+{
+  // Several points on one instrument: the array order is what the wire
+  // carries, so it is the one thing a per-point slip would show up in.
+  auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kCounter),
+                                    metric_sdk::AggregationTemporality::kDelta);
+  for (std::int64_t value :
+       {static_cast<std::int64_t>(1), static_cast<std::int64_t>(-2), static_cast<std::int64_t>(3)})
+  {
+    metric_sdk::SumPointData point;
+    point.value_ = value;
+    metric_sdk::PointAttributes attributes;
+    attributes.SetAttribute("point", value);
+    metric_data.point_data_attr_.push_back(
+        metric_sdk::PointDataAttributes{std::move(attributes), point});
+  }
+  ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
+}
+
+TEST(OtlpJsonMetricEquivalence, SeveralPointsInOneHistogram)
+{
+  auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kHistogram,
+                                                   metric_sdk::InstrumentValueType::kDouble),
+                                    metric_sdk::AggregationTemporality::kCumulative);
+  for (int index = 0; index < 2; ++index)
+  {
+    metric_sdk::HistogramPointData point;
+    point.boundaries_     = {1.0 + index};
+    point.counts_         = {static_cast<std::uint64_t>(index), 1};
+    point.count_          = static_cast<std::uint64_t>(index) + 1;
+    point.sum_            = 1.5 * index;
+    point.min_            = 0.0;
+    point.max_            = 2.0;
+    point.record_min_max_ = true;
+    metric_data.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, point});
+  }
+  ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
+}
+
+TEST(OtlpJsonMetricEquivalence, HistogramWithoutBoundariesOrBucketCounts)
+{
+  // A histogram carrying neither array: both are repeated fields, absent
+  // rather than empty.
+  auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kHistogram,
+                                                   metric_sdk::InstrumentValueType::kDouble),
+                                    metric_sdk::AggregationTemporality::kDelta);
+  metric_sdk::HistogramPointData point;
+  point.count_          = 4;
+  point.sum_            = 7.5;
+  point.record_min_max_ = false;
+  metric_data.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, point});
+  ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
+}
+
+TEST(OtlpJsonMetricEquivalence, ExponentialHistogramBucketsAtOffsetZero)
+{
+  // An offset of zero is a singular field at its default, so it drops out
+  // while the counts it indexes stay.
+  auto metric_data = MakeMetricData(MakeDescriptor(metric_sdk::InstrumentType::kHistogram,
+                                                   metric_sdk::InstrumentValueType::kDouble),
+                                    metric_sdk::AggregationTemporality::kDelta);
+  metric_sdk::Base2ExponentialHistogramPointData point;
+  point.count_            = 2;
+  point.record_min_max_   = false;
+  point.positive_buckets_ = std::make_unique<metric_sdk::AdaptingCircularBufferCounter>(10);
+  point.positive_buckets_->Increment(0, 2);
+  metric_data.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, std::move(point)});
+  ExpectSameEncoding(MakeResourceMetrics({std::move(metric_data)}));
+}
+
+TEST(OtlpJsonMetricEquivalence, ExponentialHistogramPointWithNothingSet)
+{
+  // No buckets and no collection window: the point has no field set, and a
+  // message with no field set is null even inside a repeated field.
+  metric_sdk::MetricData metric_data;
+  metric_data.instrument_descriptor   = MakeDescriptor(metric_sdk::InstrumentType::kHistogram,
+                                                       metric_sdk::InstrumentValueType::kDouble);
+  metric_data.aggregation_temporality = metric_sdk::AggregationTemporality::kDelta;
+  metric_sdk::Base2ExponentialHistogramPointData point;
+  metric_data.point_data_attr_.push_back(metric_sdk::PointDataAttributes{{}, std::move(point)});
+
+  std::vector<metric_sdk::MetricData> metrics;
+  metrics.push_back(std::move(metric_data));
+  auto &stored = nostd::get<metric_sdk::Base2ExponentialHistogramPointData>(
+      metrics.back().point_data_attr_.back().point_data);
+  stored.positive_buckets_.reset();
+  stored.negative_buckets_.reset();
+
+  metric_sdk::ResourceMetrics data;
+  data.resource_ = &TestResource();
+  data.scope_metric_data_.push_back(metric_sdk::ScopeMetrics{&TestScope(), std::move(metrics)});
   ExpectSameEncoding(data);
 }
 
