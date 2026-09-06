@@ -58,35 +58,23 @@ void WriteUInt64AnyValue(JsonWriter &writer, std::uint64_t value) noexcept
   writer.EndObject();
 }
 
-// Emits the string alternative of an AnyValue, applying the length limit and,
-// where the build checks it, falling back to bytesValue for input that is not
-// valid UTF-8 -- a JSON string cannot carry those bytes.
-void WriteStringAnyValueBody(JsonWriter &writer,
-                             const char *data,
-                             std::size_t size,
-                             const AttributeMappingOptions &options) noexcept
+// Emits the string alternative of an AnyValue. Where the build checks UTF-8,
+// input that is not valid falls back to bytesValue.
+void WriteStringAnyValue(JsonWriter &writer, const std::string &value) noexcept
 {
-  const std::size_t kept_len =
-      opentelemetry::sdk::common::Utf8SafePrefixLength(data, size,
-                                                       options.attribute_value_length_limit);
+  writer.BeginObject();
 #if defined(ENABLE_OTLP_UTF8_VALIDITY)
-  if (!utf8_range::IsStructurallyValid({data, kept_len}))
+  if (!utf8_range::IsStructurallyValid({value.data(), value.size()}))
   {
+    // A JSON string cannot carry bytes that are not valid UTF-8.
     writer.Key("bytesValue");
-    writer.WriteBytes(reinterpret_cast<const std::uint8_t *>(data), kept_len);
+    writer.WriteBytes(reinterpret_cast<const std::uint8_t *>(value.data()), value.size());
+    writer.EndObject();
     return;
   }
 #endif
   writer.Key("stringValue");
-  writer.WriteString(nostd::string_view{data, kept_len});
-}
-
-void WriteStringAnyValue(JsonWriter &writer,
-                         const std::string &value,
-                         const AttributeMappingOptions &options) noexcept
-{
-  writer.BeginObject();
-  WriteStringAnyValueBody(writer, value.data(), value.size(), options);
+  writer.WriteString(value);
   writer.EndObject();
 }
 
@@ -124,7 +112,6 @@ void WriteScalarAnyValue(JsonWriter &writer, nostd::string_view key, WriteScalar
 struct OwnedAttributeValueVisitor
 {
   JsonWriter &writer;
-  const AttributeMappingOptions &options;
 
   void operator()(bool value) const noexcept
   {
@@ -158,7 +145,7 @@ struct OwnedAttributeValueVisitor
 
   void operator()(const std::string &value) const noexcept
   {
-    WriteStringAnyValue(writer, value, options);
+    WriteStringAnyValue(writer, value);
   }
 
   void operator()(const std::vector<bool> &values) const noexcept
@@ -204,43 +191,17 @@ struct OwnedAttributeValueVisitor
 
   void operator()(const std::vector<std::string> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](const std::string &value) {
-      WriteStringAnyValue(writer, value, options);
-    });
+    WriteArrayAnyValue(writer, values,
+                       [&](const std::string &value) { WriteStringAnyValue(writer, value); });
   }
 
   void operator()(const std::vector<std::uint8_t> &values) const noexcept
   {
-    // A byte array is one bytesValue, not an array of them, and it truncates
-    // at the raw byte boundary because it is not text.
-    const std::size_t kept_len = (std::min)(values.size(), options.attribute_value_length_limit);
+    // A byte array is one bytesValue, not an array of them.
     WriteScalarAnyValue(writer, "bytesValue",
-                        [&] { writer.WriteBytes(values.data(), kept_len); });
+                        [&] { writer.WriteBytes(values.data(), values.size()); });
   }
 };
-
-/**
- * Writes the attributes array, and nothing at all when there are none -- a
- * repeated field holding no elements is absent rather than empty.
- */
-template <typename AttributeContainer>
-void WriteAttributesField(JsonWriter &writer,
-                          const AttributeContainer &attributes,
-                          const AttributeMappingOptions &options) noexcept
-{
-  if (attributes.empty())
-  {
-    return;
-  }
-
-  writer.Key("attributes");
-  writer.BeginArray();
-  for (const auto &attribute : attributes)
-  {
-    WriteKeyValue(writer, attribute.first, attribute.second, options);
-  }
-  writer.EndArray();
-}
 
 }  // namespace
 
@@ -262,22 +223,20 @@ void WriteUInt64String(JsonWriter &writer, std::uint64_t value) noexcept
 }
 
 void WriteAnyValue(JsonWriter &writer,
-                   const opentelemetry::sdk::common::OwnedAttributeValue &value,
-                   const AttributeMappingOptions &options) noexcept
+                   const opentelemetry::sdk::common::OwnedAttributeValue &value) noexcept
 {
-  opentelemetry::sdk::common::VisitVariant(OwnedAttributeValueVisitor{writer, options}, value);
+  opentelemetry::sdk::common::VisitVariant(OwnedAttributeValueVisitor{writer}, value);
 }
 
 void WriteKeyValue(JsonWriter &writer,
                    nostd::string_view key,
-                   const opentelemetry::sdk::common::OwnedAttributeValue &value,
-                   const AttributeMappingOptions &options) noexcept
+                   const opentelemetry::sdk::common::OwnedAttributeValue &value) noexcept
 {
   writer.BeginObject();
   writer.Key("key");
   writer.WriteString(key);
   writer.Key("value");
-  WriteAnyValue(writer, value, options);
+  WriteAnyValue(writer, value);
   writer.EndObject();
 }
 
@@ -292,7 +251,7 @@ void WriteResource(JsonWriter &writer,
   }
 
   writer.BeginObject();
-  WriteAttributesField(writer, attributes, AttributeMappingOptions{});
+  WriteAttributes(writer, attributes);
   writer.EndObject();
 }
 
@@ -321,7 +280,7 @@ void WriteInstrumentationScope(
     writer.Key("version");
     writer.WriteString(version);
   }
-  WriteAttributesField(writer, attributes, AttributeMappingOptions{});
+  WriteAttributes(writer, attributes);
   writer.EndObject();
 }
 
