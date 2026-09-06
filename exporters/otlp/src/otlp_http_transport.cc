@@ -116,16 +116,6 @@ public:
     }
   }
 
-  /**
-   * Returns the body of the response
-   */
-  std::string GetResponseBody()
-  {
-    // Lock so that body_ can't be written to while returning it
-    std::unique_lock<std::mutex> lk(mutex_);
-    return std::string(body_.begin(), body_.end());
-  }
-
   // Callback method when an http event occurs
   void OnEvent(http_client::SessionState state,
                opentelemetry::nostd::string_view reason) noexcept override

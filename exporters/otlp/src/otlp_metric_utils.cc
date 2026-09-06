@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "opentelemetry/common/timestamp.h"
-#include "opentelemetry/exporters/otlp/otlp_aggregation_temporality.h"
+#include "opentelemetry/exporters/otlp/detail/otlp_aggregation_temporality.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_populate_attribute_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_preferred_temporality.h"
@@ -356,25 +356,25 @@ void OtlpMetricUtils::PopulateRequest(
 sdk::metrics::AggregationTemporalitySelector OtlpMetricUtils::ChooseTemporalitySelector(
     PreferredAggregationTemporality preferred_aggregation_temporality) noexcept
 {
-  return ChooseAggregationTemporalitySelector(preferred_aggregation_temporality);
+  return detail::ChooseAggregationTemporalitySelector(preferred_aggregation_temporality);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::DeltaTemporalitySelector(
     sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  return SelectDeltaTemporality(instrument_type);
+  return detail::SelectDeltaTemporality(instrument_type);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::CumulativeTemporalitySelector(
     sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  return SelectCumulativeTemporality(instrument_type);
+  return detail::SelectCumulativeTemporality(instrument_type);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::LowMemoryTemporalitySelector(
     sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  return SelectLowMemoryTemporality(instrument_type);
+  return detail::SelectLowMemoryTemporality(instrument_type);
 }
 
 }  // namespace otlp
