@@ -44,6 +44,11 @@ Increment the:
   with traces rather than duplicated. The target now also links
   `opentelemetry_metrics`.
 
+* [EXPORTER] Fix the protobuf-free OTLP/JSON mapping emitting an array
+  attribute holding no elements as `{"arrayValue":{"values":[]}}`. The
+  reflection-based converter emits `{"arrayValue":null}`, because the
+  `ArrayValue` it creates has no field set, and the two paths now agree.
+
 * [EXPORTER] Add a `JsonWriter` token interface for OTLP/JSON serialization,
   with an nlohmann-json backend behind the new
   `OTELCPP_WITH_JSON_WRITER_NLOHMANN` option, and route the OTLP HTTP and file

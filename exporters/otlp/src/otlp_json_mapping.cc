@@ -85,6 +85,18 @@ void WriteArrayAnyValue(JsonWriter &writer,
                         const Container &values,
                         WriteElement write_element) noexcept
 {
+  // An array holding nothing sets no field on the ArrayValue, and a message
+  // with no field set is null. The alternative is still chosen, so the
+  // arrayValue key is there either way.
+  if (values.empty())
+  {
+    writer.BeginObject();
+    writer.Key("arrayValue");
+    writer.WriteNull();
+    writer.EndObject();
+    return;
+  }
+
   writer.BeginObject();
   writer.Key("arrayValue");
   writer.BeginObject();
