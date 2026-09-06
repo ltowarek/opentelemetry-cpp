@@ -1,0 +1,39 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Exercises the protobuf-free OTLP/JSON exporters through the file
+# configuration path. Run with --json-builders, which registers the
+# OtlpJson* builders in place of the protobuf ones.
+
+file_format: "1.0.0"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          otlp_http:
+            endpoint: http://localhost:4318/v1/traces
+            encoding: json
+            timeout: 12000
+            compression: none
+logger_provider:
+  processors:
+    - simple:
+        exporter:
+          otlp_http:
+            endpoint: http://localhost:4318/v1/logs
+            encoding: json
+            timeout: 12000
+            compression: none
+meter_provider:
+  # Keeps the exemplar warning out of the expected output, which would
+  # otherwise depend on whether ENABLE_METRICS_EXEMPLAR_PREVIEW is set.
+  exemplar_filter: always_off
+  readers:
+    - periodic:
+        exporter:
+          otlp_http:
+            endpoint: http://localhost:4318/v1/metrics
+            encoding: json
+            timeout: 12000
+            compression: none
+            temporality_preference: cumulative
