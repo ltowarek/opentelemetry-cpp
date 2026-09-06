@@ -1,7 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-$ example_yaml --test --json-builders --yaml shelltests/otlp_http_json_builders.yaml
+$ example_yaml --test --json-builders --yaml shelltests/otlp_json_http_builders.yaml
 >
 MODEL PARSED
 SDK CREATED

@@ -29,6 +29,7 @@
 #include "opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h"
 #include "opentelemetry/exporters/otlp/otlp_json_http_span_builder.h"
 #include "opentelemetry/sdk/common/global_log_handler.h"
+#include "opentelemetry/sdk/configuration/default_histogram_aggregation.h"
 #include "opentelemetry/sdk/configuration/headers_configuration.h"
 #include "opentelemetry/sdk/configuration/http_tls_configuration.h"
 #include "opentelemetry/sdk/configuration/otlp_http_encoding.h"
@@ -37,6 +38,8 @@
 #include "opentelemetry/sdk/configuration/otlp_http_span_exporter_configuration.h"
 #include "opentelemetry/sdk/configuration/registry.h"
 #include "opentelemetry/sdk/configuration/temporality_preference.h"
+#include "opentelemetry/sdk/metrics/instruments.h"
+#include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/test_common/sdk/common/scoped_test_log_handler.h"
 #include "opentelemetry/version.h"
 
@@ -97,7 +100,7 @@ TEST(OtlpJsonHttpBuilder, SpanNodeFieldsSurviveTheMapping)
   FillModel(model);
 
   ExpectModelFieldsSurvived(
-      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model, "[test]"));
+      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model));
 }
 
 TEST(OtlpJsonHttpBuilder, LogRecordNodeFieldsSurviveTheMapping)
@@ -106,7 +109,7 @@ TEST(OtlpJsonHttpBuilder, LogRecordNodeFieldsSurviveTheMapping)
   FillModel(model);
 
   ExpectModelFieldsSurvived(
-      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpLogRecordExporterOptions>(model, "[test]"));
+      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpLogRecordExporterOptions>(model));
 }
 
 TEST(OtlpJsonHttpBuilder, MetricNodeFieldsSurviveTheMapping)
@@ -116,7 +119,7 @@ TEST(OtlpJsonHttpBuilder, MetricNodeFieldsSurviveTheMapping)
   model.temporality_preference = configuration::TemporalityPreference::delta;
 
   ExpectModelFieldsSurvived(
-      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpMetricExporterOptions>(model, "[test]"));
+      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpMetricExporterOptions>(model));
 }
 
 // A node with no TLS section must not be read as one asking for empty paths.
@@ -126,8 +129,7 @@ TEST(OtlpJsonHttpBuilder, LeavesTlsPathsEmptyWhenTheNodeHasNoTlsSection)
   FillModel(model);
   model.tls.reset();
 
-  const auto options =
-      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model, "[test]");
+  const auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model);
 
   EXPECT_TRUE(options.ssl_ca_cert_path.empty());
   EXPECT_TRUE(options.ssl_client_key_path.empty());
@@ -141,8 +143,7 @@ TEST(OtlpJsonHttpBuilder, WarnsAndStillExportsJsonWhenTheNodeAsksForProtobuf)
   model.encoding = configuration::OtlpHttpEncoding::protobuf;
 
   ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Warning};
-  const auto options =
-      detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model, "[test]");
+  const auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model);
   const auto entries = log.Drain();
 
   const bool warned = std::any_of(entries.begin(), entries.end(), [](const auto &entry) {
@@ -161,7 +162,7 @@ TEST(OtlpJsonHttpBuilder, DoesNotWarnWhenTheNodeAsksForJson)
   FillModel(model);
 
   ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Warning};
-  detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model, "[test]");
+  detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model);
   const auto entries = log.Drain();
 
   EXPECT_TRUE(entries.empty());
@@ -197,6 +198,29 @@ TEST(OtlpJsonHttpBuilder, RegisterFillsTheLogRecordSlot)
   OtlpJsonHttpLogRecordBuilder::Register(&registry);
 
   EXPECT_NE(registry.GetOtlpHttpLogRecordBuilder(), nullptr);
+}
+
+// The temporality preference is the one field a builder maps itself rather
+// than through the shared mapping, and the built exporter reports it, so this
+// is asserted through Build() rather than at the mapping seam.
+TEST(OtlpJsonHttpBuilder, MetricNodeTemporalityPreferenceReachesTheExporter)
+{
+  configuration::OtlpHttpPushMetricExporterConfiguration model;
+  FillModel(model);
+  model.default_histogram_aggregation =
+      configuration::DefaultHistogramAggregation::explicit_bucket_histogram;
+
+  model.temporality_preference = configuration::TemporalityPreference::delta;
+  const auto delta_exporter    = OtlpJsonHttpPushMetricBuilder().Build(&model);
+  ASSERT_NE(delta_exporter, nullptr);
+  EXPECT_EQ(sdk::metrics::AggregationTemporality::kDelta,
+            delta_exporter->GetAggregationTemporality(sdk::metrics::InstrumentType::kCounter));
+
+  model.temporality_preference   = configuration::TemporalityPreference::cumulative;
+  const auto cumulative_exporter = OtlpJsonHttpPushMetricBuilder().Build(&model);
+  ASSERT_NE(cumulative_exporter, nullptr);
+  EXPECT_EQ(sdk::metrics::AggregationTemporality::kCumulative,
+            cumulative_exporter->GetAggregationTemporality(sdk::metrics::InstrumentType::kCounter));
 }
 
 TEST(OtlpJsonHttpBuilder, BuildsAWorkingExporterForEachSignal)

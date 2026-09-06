@@ -43,8 +43,7 @@ OtlpJsonHttpPushMetricBuilder::Build(
         "ignored");
   }
 
-  auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpMetricExporterOptions>(
-      *model, "[Otlp Json Http Exporter]");
+  auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpMetricExporterOptions>(*model);
 
   options.aggregation_temporality =
       OtlpBuilderUtils::ConvertTemporalityPreference(model->temporality_preference);
