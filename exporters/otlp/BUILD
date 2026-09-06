@@ -481,10 +481,14 @@ cc_library(
 # exporting only traces does not link the metric and log mappings too.
 cc_library(
     name = "otlp_json_http_exporter",
-    srcs = ["src/otlp_json_http_exporter.cc"],
+    srcs = [
+        "src/otlp_json_http_exporter.cc",
+        "src/otlp_json_http_exporter_factory.cc",
+    ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h",
         "include/opentelemetry/exporters/otlp/otlp_json_http_exporter.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_exporter_factory.h",
     ],
     strip_include_prefix = "include",
     tags = [
@@ -502,10 +506,14 @@ cc_library(
 
 cc_library(
     name = "otlp_json_http_log_record_exporter",
-    srcs = ["src/otlp_json_http_log_record_exporter.cc"],
+    srcs = [
+        "src/otlp_json_http_log_record_exporter.cc",
+        "src/otlp_json_http_log_record_exporter_factory.cc",
+    ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h",
         "include/opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter_factory.h",
     ],
     strip_include_prefix = "include",
     tags = [
@@ -523,11 +531,15 @@ cc_library(
 
 cc_library(
     name = "otlp_json_http_metric_exporter",
-    srcs = ["src/otlp_json_http_metric_exporter.cc"],
+    srcs = [
+        "src/otlp_json_http_metric_exporter.cc",
+        "src/otlp_json_http_metric_exporter_factory.cc",
+    ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/detail/otlp_aggregation_temporality.h",
         "include/opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h",
         "include/opentelemetry/exporters/otlp/otlp_json_http_metric_exporter.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_metric_exporter_factory.h",
     ],
     strip_include_prefix = "include",
     tags = [
@@ -1048,6 +1060,19 @@ cc_test(
 )
 
 cc_test(
+    name = "otlp_json_http_exporter_factory_test",
+    srcs = ["test/otlp_json_http_exporter_factory_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_exporter",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "otlp_json_http_exporter_test",
     srcs = ["test/otlp_json_http_exporter_test.cc"],
     tags = [
@@ -1062,6 +1087,19 @@ cc_test(
 )
 
 cc_test(
+    name = "otlp_json_http_log_record_exporter_factory_test",
+    srcs = ["test/otlp_json_http_log_record_exporter_factory_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_log_record_exporter",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "otlp_json_http_log_record_exporter_test",
     srcs = ["test/otlp_json_http_log_record_exporter_test.cc"],
     tags = [
@@ -1071,6 +1109,19 @@ cc_test(
     deps = [
         ":otlp_json_http_log_record_exporter",
         "//test_common/src/http/client/nosend:http_client_nosend",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_http_metric_exporter_factory_test",
+    srcs = ["test/otlp_json_http_metric_exporter_factory_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_metric_exporter",
         "@com_google_googletest//:gtest_main",
     ],
 )
