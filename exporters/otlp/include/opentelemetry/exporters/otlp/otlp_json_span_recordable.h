@@ -153,8 +153,8 @@ private:
   opentelemetry::trace::SpanKind span_kind_ = opentelemetry::trace::SpanKind::kInternal;
   bool has_span_kind_                       = false;
   std::uint64_t start_time_unix_nano_       = 0;
-  std::uint64_t end_time_unix_nano_        = 0;
-  std::uint32_t flags_                     = 0;
+  std::uint64_t end_time_unix_nano_         = 0;
+  std::uint32_t flags_                      = 0;
   OrderedAttributes attributes_;
   std::uint32_t dropped_attributes_count_ = 0;
   std::vector<Event> events_;

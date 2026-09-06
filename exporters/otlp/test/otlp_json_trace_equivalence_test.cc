@@ -60,11 +60,6 @@ namespace
 namespace trace_api = opentelemetry::trace;
 namespace sdk_trace = opentelemetry::sdk::trace;
 
-// A span's worth of recorded calls, replayed against whichever recordable is
-// under test. Keeping the input as a script rather than as a built object is
-// what makes "identical input" literally true for both paths.
-using RecordSpan = void (*)(sdk_trace::Recordable &);
-
 constexpr std::uint8_t kTraceIdBytes[trace_api::TraceId::kSize] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
@@ -276,6 +271,28 @@ TEST(OtlpJsonTraceEquivalence, GroupsByResourceAndScope)
   });
 
   EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
+}
+
+// A resource with no attributes and a scope with no name, version or
+// attributes each have no field set, and a message with no field set encodes
+// as null rather than as an empty object. These are the emptiest inputs the
+// mapping has to agree on.
+TEST(OtlpJsonTraceEquivalence, EmptyResourceAndScopeAreNull)
+{
+  static auto scope =
+      opentelemetry::sdk::instrumentationscope::InstrumentationScope::Create("", "");
+
+  auto encodings = EncodeBothWays(1, [](std::size_t, sdk_trace::Recordable &recordable) {
+    recordable.SetResource(opentelemetry::sdk::resource::Resource::GetEmpty());
+    recordable.SetInstrumentationScope(*scope);
+    recordable.SetIdentity(MakeSpanContext(kTraceIdBytes, kSpanIdBytes), trace_api::SpanId());
+  });
+
+  EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
+  EXPECT_NE(encodings.protobuf_free.find("\"resource\":null"), std::string::npos)
+      << encodings.protobuf_free;
+  EXPECT_NE(encodings.protobuf_free.find("\"scope\":null"), std::string::npos)
+      << encodings.protobuf_free;
 }
 
 TEST(OtlpJsonTraceEquivalence, NanosecondTimestampsSurviveAsStrings)

@@ -15,11 +15,41 @@ Increment the:
 
 ## [Unreleased]
 
+* [BUILD] Add `OTELCPP_WITH_JSON_WRITER_NLOHMANN`, which controls whether the
+  nlohmann-json `JsonWriter` backend is compiled. It defaults ON whenever an
+  OTLP exporter that emits JSON is enabled, so existing builds are unaffected.
+  `OTELCPP_WITH_OTLP_HTTP` and `OTELCPP_WITH_OTLP_FILE` no longer force
+  nlohmann-json on, so a consumer supplying their own `JsonWriterFactory` can
+  now drop it from the build entirely. The backend moves to its own target,
+  `opentelemetry_exporter_otlp_json_writer_nlohmann`, leaving
+  `opentelemetry_exporter_otlp_json_writer` as the interface target, mirroring
+  how `opentelemetry_http_client` and `opentelemetry_http_client_curl` are
+  split. Bazel gets the equivalent `--//exporters/otlp:with_json_writer_nlohmann`
+  flag. A translation unit calling `detail::GetDefaultJsonWriterFactory()` must
+  now link the writer target to see the backend.
+
+* [EXPORTER] Add a protobuf-free mapping from SDK spans to OTLP/JSON:
+  `OtlpJsonSpanRecordable` plus `ConvertSpansToJson`, in the new
+  `opentelemetry_exporter_otlp_json_mapping` target. It emits through the
+  `JsonWriter` seam and references no protobuf, and an equivalence test asserts
+  it produces byte-identical JSON to the existing reflection-based converter.
+  The resource, scope and attribute mapping is shared, for the metric and log
+  signals to reuse.
+
+* [EXPORTER] Add a `JsonWriter` token interface for OTLP/JSON serialization,
+  with an nlohmann-json backend behind the new
+  `OTELCPP_WITH_JSON_WRITER_NLOHMANN` option, and route the OTLP HTTP and file
+  clients through it. Their two near-identical reflection-based converters are
+  replaced by a single shared one. The exporter constructors and factories
+  take an optional `JsonWriterFactory`, so a custom backend can be supplied
+  the way a custom `HttpClientFactory` already is. The emitted JSON is
+  unchanged.
+  [#2541](https://github.com/open-telemetry/opentelemetry-cpp/issues/2541)
+
 * [EXPORTER] Add a `JsonWriter` interface for OTLP/JSON serialization, so a
   consumer can supply their own JSON backend in place of the default
   nlohmann-json one.
   [#2541](https://github.com/open-telemetry/opentelemetry-cpp/issues/2541)
-
 * [DOC] Fix and clarify the `StartSpanOptions` documentation
   [#4526](https://github.com/open-telemetry/opentelemetry-cpp/pull/4526)
 
