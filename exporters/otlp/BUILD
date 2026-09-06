@@ -344,10 +344,48 @@ cc_library(
     ],
 )
 
+# The OTLP/HTTP send path, with no protobuf on either end. The dep list is
+# what proves the send path needs no protobuf, so do not add a protobuf dep
+# here to fix a build error -- fix the split instead.
+cc_library(
+    name = "otlp_http_transport",
+    srcs = [
+        "src/otlp_http.cc",
+        "src/otlp_http_transport.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_http_transport.h",
+        "include/opentelemetry/exporters/otlp/otlp_environment.h",
+        "include/opentelemetry/exporters/otlp/otlp_http.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_client.h",
+    ],
+    copts = [
+        "-DCURL_STATICLIB",
+    ],
+    linkopts = select({
+        "//bazel:windows": [
+            "-DEFAULTLIB:advapi32.lib",
+            "-DEFAULTLIB:crypt32.lib",
+        ],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http",
+        "otlp_http_log",
+    ],
+    deps = [
+        ":otlp_json_writer",
+        "//api",
+        "//ext/src/http/client/curl:http_client_curl",
+        "//sdk:headers",
+    ],
+)
+
 cc_library(
     name = "otlp_http_client",
     srcs = [
-        "src/otlp_http.cc",
         "src/otlp_http_client.cc",
     ],
     hdrs = [
@@ -374,6 +412,7 @@ cc_library(
         "otlp_http_log",
     ],
     deps = [
+        ":otlp_http_transport",
         ":otlp_json_converter",
         ":otlp_json_writer",
         "//api",
@@ -865,6 +904,20 @@ cc_test(
     deps = [
         ":otlp_json_partial_success",
         "//test_common:headers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_http_transport_test",
+    srcs = ["test/otlp_http_transport_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_http_transport",
+        "//test_common/src/http/client/nosend:http_client_nosend",
         "@com_google_googletest//:gtest_main",
     ],
 )

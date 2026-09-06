@@ -593,13 +593,40 @@ endif()
 if(OTELCPP_WITH_OTLP_HTTP)
 
   #
-  # opentelemetry_exporter_otlp_http_client
+  # opentelemetry_exporter_otlp_http_transport
+  #
+  # The OTLP/HTTP send path, with no protobuf on either end. Deliberately does
+  # not link the message runtime, so that "does this exporter need protobuf?"
+  # is answerable by reading this file.
   #
 
   add_library(
-    opentelemetry_exporter_otlp_http_client
+    opentelemetry_exporter_otlp_http_transport
     ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http.cc
-    src/otlp_http_client.cc)
+    src/otlp_http_transport.cc)
+  set_target_properties(opentelemetry_exporter_otlp_http_transport
+                        PROPERTIES EXPORT_NAME otlp_http_transport)
+  set_target_version(opentelemetry_exporter_otlp_http_transport)
+
+  target_link_libraries(
+    opentelemetry_exporter_otlp_http_transport
+    PUBLIC opentelemetry_ext opentelemetry_http_client opentelemetry_otlp_common
+    PRIVATE opentelemetry_common)
+
+  target_include_directories(
+    opentelemetry_exporter_otlp_http_transport
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+           "$<INSTALL_INTERFACE:include>")
+
+  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+       opentelemetry_exporter_otlp_http_transport)
+
+  #
+  # opentelemetry_exporter_otlp_http_client
+  #
+
+  add_library(opentelemetry_exporter_otlp_http_client
+              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_client.cc)
   set_target_properties(opentelemetry_exporter_otlp_http_client
                         PROPERTIES EXPORT_NAME otlp_http_client)
   set_target_version(opentelemetry_exporter_otlp_http_client)
@@ -611,7 +638,7 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   target_link_libraries(
     opentelemetry_exporter_otlp_http_client
-    PUBLIC opentelemetry_http_client
+    PUBLIC opentelemetry_http_client opentelemetry_exporter_otlp_http_transport
     PRIVATE opentelemetry_common opentelemetry_exporter_otlp_json_converter)
 
   target_include_directories(
@@ -1360,6 +1387,22 @@ if(OTELCPP_BUILD_TESTING)
         TEST_PREFIX exporter.otlp.
         TEST_LIST otlp_http_exporter_test)
     endif()
+
+    # Links the transport and the no-send client and nothing else: the target
+    # list is what proves the send path needs no protobuf, so do not add
+    # protobuf::libprotobuf here to fix a link error -- fix the split instead.
+    add_executable(otlp_http_transport_test test/otlp_http_transport_test.cc)
+    target_link_libraries(
+      otlp_http_transport_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
+      ${GMOCK_LIB} opentelemetry_exporter_otlp_http_transport
+      opentelemetry_http_client_nosend opentelemetry_test_common)
+    if(WIN32)
+      target_link_libraries(otlp_http_transport_test ws2_32)
+    endif()
+    gtest_add_tests(
+      TARGET otlp_http_transport_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_http_transport_test)
 
     add_executable(otlp_http_exporter_factory_test
                    test/otlp_http_exporter_factory_test.cc)

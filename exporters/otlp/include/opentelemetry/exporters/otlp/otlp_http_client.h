@@ -3,16 +3,11 @@
 
 #pragma once
 
-#include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstddef>
 #include <functional>
-#include <list>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <unordered_map>
 
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/exporters/otlp/otlp_http.h"
@@ -20,7 +15,6 @@
 #include "opentelemetry/ext/http/client/http_client.h"
 #include "opentelemetry/ext/http/client/http_client_factory.h"
 #include "opentelemetry/nostd/string_view.h"
-#include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/common/exporter_utils.h"
 #include "opentelemetry/sdk/common/thread_instrumentation.h"
 #include "opentelemetry/version.h"
@@ -40,6 +34,11 @@ namespace exporter
 {
 namespace otlp
 {
+namespace detail
+{
+class OtlpHttpTransport;
+}  // namespace detail
+
 // The default URL path to post metric data.
 constexpr char kDefaultMetricsPath[] = "/v1/metrics";
 // The HTTP header "Content-Type"
@@ -230,7 +229,7 @@ public:
    * Get options of current OTLP http client.
    * @return options of current OTLP http client.
    */
-  inline const OtlpHttpClientOptions &GetOptions() const noexcept { return options_; }
+  const OtlpHttpClientOptions &GetOptions() const noexcept;
 
   /**
    * Get if this OTLP http client is shutdown.
@@ -239,83 +238,13 @@ public:
   bool IsShutdown() const noexcept;
 
 private:
-  struct HttpSessionData
-  {
-    std::shared_ptr<opentelemetry::ext::http::client::Session> session;
-    std::shared_ptr<opentelemetry::ext::http::client::EventHandler> event_handle;
-
-    std::unique_ptr<google::protobuf::Arena> arena;
-    google::protobuf::Message *response = nullptr;
-
-    HttpSessionData() noexcept;
-    HttpSessionData(std::shared_ptr<opentelemetry::ext::http::client::Session> &&input_session,
-                    std::shared_ptr<opentelemetry::ext::http::client::EventHandler> &&input_handle,
-                    std::unique_ptr<google::protobuf::Arena> &&input_arena,
-                    google::protobuf::Message *input_response) noexcept;
-
-    ~HttpSessionData();
-    HttpSessionData(HttpSessionData &&) noexcept;
-    HttpSessionData &operator=(HttpSessionData &&) noexcept;
-    HttpSessionData(const HttpSessionData &)            = delete;
-    HttpSessionData &operator=(const HttpSessionData &) = delete;
-  };
-
-  /**
-   * @brief Create a Session object that deserializes the response body or return an error result.
-   *
-   * @param message The message to send
-   * @param arena Protobuf arena that owns response
-   * @param response the parsed body is written here on 2xx
-   * @param result_callback Callback for the export result; receives the populated response
-   */
-  nostd::variant<sdk::common::ExportResult, HttpSessionData> createSession(
-      const google::protobuf::Message &message,
-      std::unique_ptr<google::protobuf::Arena> &&arena,
-      google::protobuf::Message *response,
-      std::function<bool(opentelemetry::sdk::common::ExportResult, google::protobuf::Message *)>
-          &&result_callback) noexcept;
-
-  /**
-   * Add http session and hold it's lifetime.
-   * @param session_data the session to add
-   */
-  void addSession(HttpSessionData &&session_data) noexcept;
-
-  /**
-   * @brief Real delete all sessions and event handles.
-   * @note This function is called in the same thread where we create sessions and handles
-   *
-   * @return return true if there are more sessions to delete
-   */
-  bool cleanupGCSessions() noexcept;
-
-  // Stores if this HTTP client had its Shutdown() method called
-  std::atomic<bool> is_shutdown_;
-
-  // The configuration options associated with this HTTP client.
-  const OtlpHttpClientOptions options_;
-
-  // Object that stores the HTTP sessions that have been created
-  std::shared_ptr<ext::http::client::HttpClient> http_client_;
-
+  // The transport that owns the sessions, the concurrency control and the shutdown
+  // handling. Held by pointer so that the public header does not have to include the
+  // detail one, which includes this header in turn for the options.
   // Resolved from options_.json_writer_factory, or the default backend.
   std::shared_ptr<JsonWriterFactory> json_writer_factory_;
+  std::unique_ptr<detail::OtlpHttpTransport> transport_;
 
-  // Cached parsed URI
-  std::string http_uri_;
-
-  // Running sessions and event handles
-  std::unordered_map<const opentelemetry::ext::http::client::Session *, HttpSessionData>
-      running_sessions_;
-  // Sessions and event handles that are waiting to be deleted
-  std::list<HttpSessionData> gc_sessions_;
-  // Lock for running_sessions_, gc_sessions_ and http_client_
-  std::recursive_mutex session_manager_lock_;
-  // Condition variable and mutex to control the concurrency count of running sessions
-  std::mutex session_waker_lock_;
-  std::condition_variable session_waker_;
-  std::atomic<size_t> start_session_counter_;
-  std::atomic<size_t> finished_session_counter_;
 };
 }  // namespace otlp
 }  // namespace exporter
