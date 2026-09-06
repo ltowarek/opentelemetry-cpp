@@ -122,11 +122,13 @@ cc_library(
     name = "otlp_json_mapping",
     srcs = [
         "src/otlp_json_mapping.cc",
+        "src/otlp_json_metric_mapping.cc",
         "src/otlp_json_span_recordable.cc",
         "src/otlp_json_trace_mapping.cc",
     ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/otlp_json_mapping.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_metric_mapping.h",
         "include/opentelemetry/exporters/otlp/otlp_json_span_recordable.h",
         "include/opentelemetry/exporters/otlp/otlp_json_trace_mapping.h",
     ],
@@ -136,6 +138,7 @@ cc_library(
         ":otlp_json_writer",
         ":otlp_utf8_validity",
         "//api",
+        "//sdk/src/metrics",
         "//sdk/src/resource",
         "//sdk/src/trace",
     ],
@@ -781,6 +784,22 @@ cc_test(
     ],
     deps = [
         ":otlp_json_writer",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_metric_equivalence_test",
+    srcs = ["test/otlp_json_metric_equivalence_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_converter",
+        ":otlp_json_mapping",
+        ":otlp_json_writer",
+        ":otlp_recordable",
         "@com_google_googletest//:gtest_main",
     ],
 )

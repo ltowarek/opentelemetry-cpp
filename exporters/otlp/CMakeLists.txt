@@ -172,7 +172,8 @@ endif()
 add_library(
   opentelemetry_exporter_otlp_json_mapping
   ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_mapping.cc
-  src/otlp_json_span_recordable.cc src/otlp_json_trace_mapping.cc)
+  src/otlp_json_span_recordable.cc src/otlp_json_trace_mapping.cc
+  src/otlp_json_metric_mapping.cc)
 
 set_target_properties(opentelemetry_exporter_otlp_json_mapping
                       PROPERTIES EXPORT_NAME otlp_json_mapping)
@@ -185,8 +186,8 @@ target_include_directories(
 
 target_link_libraries(
   opentelemetry_exporter_otlp_json_mapping
-  PUBLIC opentelemetry_trace opentelemetry_resources opentelemetry_common
-         opentelemetry_exporter_otlp_json_writer)
+  PUBLIC opentelemetry_trace opentelemetry_metrics opentelemetry_resources
+         opentelemetry_common opentelemetry_exporter_otlp_json_writer)
 
 if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
   target_link_libraries(opentelemetry_exporter_otlp_json_mapping
@@ -199,7 +200,7 @@ if(OTELCPP_INSTALL)
   opentelemetry_add_pkgconfig(
     exporter_otlp_json_mapping "OpenTelemetry OTLP - JSON Mapping"
     "Protobuf-free mapping from SDK data to OTLP/JSON."
-    "opentelemetry_trace opentelemetry_resources opentelemetry_common opentelemetry_exporter_otlp_json_writer"
+    "opentelemetry_trace opentelemetry_metrics opentelemetry_resources opentelemetry_common opentelemetry_exporter_otlp_json_writer"
   )
 endif()
 
@@ -1078,6 +1079,22 @@ if(OTELCPP_BUILD_TESTING)
       TARGET otlp_json_trace_equivalence_test
       TEST_PREFIX exporter.otlp.
       TEST_LIST otlp_json_trace_equivalence_test)
+
+    add_executable(otlp_json_metric_equivalence_test
+                   test/otlp_json_metric_equivalence_test.cc)
+    target_link_libraries(
+      otlp_json_metric_equivalence_test
+      ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT}
+      opentelemetry_exporter_otlp_json_mapping
+      opentelemetry_exporter_otlp_json_converter
+      opentelemetry_otlp_recordable
+      opentelemetry_exporter_otlp_json_writer
+      protobuf::libprotobuf)
+    gtest_add_tests(
+      TARGET otlp_json_metric_equivalence_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_json_metric_equivalence_test)
   endif()
 
   if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
