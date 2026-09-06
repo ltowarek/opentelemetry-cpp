@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/exporters/otlp/otlp_aggregation_temporality.h"
 #include "opentelemetry/exporters/otlp/otlp_metric_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_populate_attribute_utils.h"
 #include "opentelemetry/exporters/otlp/otlp_preferred_temporality.h"
@@ -355,58 +356,27 @@ void OtlpMetricUtils::PopulateRequest(
 sdk::metrics::AggregationTemporalitySelector OtlpMetricUtils::ChooseTemporalitySelector(
     PreferredAggregationTemporality preferred_aggregation_temporality) noexcept
 {
-  if (preferred_aggregation_temporality == PreferredAggregationTemporality::kDelta)
-  {
-    return DeltaTemporalitySelector;
-  }
-  else if (preferred_aggregation_temporality == PreferredAggregationTemporality::kCumulative)
-  {
-    return CumulativeTemporalitySelector;
-  }
-  return LowMemoryTemporalitySelector;
+  return ChooseAggregationTemporalitySelector(preferred_aggregation_temporality);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::DeltaTemporalitySelector(
     sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  switch (instrument_type)
-  {
-    case sdk::metrics::InstrumentType::kCounter:
-    case sdk::metrics::InstrumentType::kObservableCounter:
-    case sdk::metrics::InstrumentType::kHistogram:
-    case sdk::metrics::InstrumentType::kObservableGauge:
-    case sdk::metrics::InstrumentType::kGauge:
-      return sdk::metrics::AggregationTemporality::kDelta;
-    case sdk::metrics::InstrumentType::kUpDownCounter:
-    case sdk::metrics::InstrumentType::kObservableUpDownCounter:
-      return sdk::metrics::AggregationTemporality::kCumulative;
-  }
-  return sdk::metrics::AggregationTemporality::kUnspecified;
+  return SelectDeltaTemporality(instrument_type);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::CumulativeTemporalitySelector(
-    sdk::metrics::InstrumentType /* instrument_type */) noexcept
+    sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  return sdk::metrics::AggregationTemporality::kCumulative;
+  return SelectCumulativeTemporality(instrument_type);
 }
 
 sdk::metrics::AggregationTemporality OtlpMetricUtils::LowMemoryTemporalitySelector(
     sdk::metrics::InstrumentType instrument_type) noexcept
 {
-  switch (instrument_type)
-  {
-    case sdk::metrics::InstrumentType::kCounter:
-    case sdk::metrics::InstrumentType::kHistogram:
-      return sdk::metrics::AggregationTemporality::kDelta;
-    case sdk::metrics::InstrumentType::kObservableCounter:
-    case sdk::metrics::InstrumentType::kGauge:
-    case sdk::metrics::InstrumentType::kObservableGauge:
-    case sdk::metrics::InstrumentType::kUpDownCounter:
-    case sdk::metrics::InstrumentType::kObservableUpDownCounter:
-      return sdk::metrics::AggregationTemporality::kCumulative;
-  }
-  return sdk::metrics::AggregationTemporality::kUnspecified;
+  return SelectLowMemoryTemporality(instrument_type);
 }
+
 }  // namespace otlp
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE
