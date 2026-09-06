@@ -344,19 +344,48 @@ cc_library(
     ],
 )
 
+# The three exporter option structs. Their own target because both the
+# protobuf and the protobuf-free exporter of a signal need them, and compiling
+# them into each would put the same symbols in a binary twice.
+cc_library(
+    name = "otlp_http_exporter_options",
+    srcs = [
+        "src/otlp_http.cc",
+        "src/otlp_http_exporter_options.cc",
+        "src/otlp_http_log_record_exporter_options.cc",
+        "src/otlp_http_metric_exporter_options.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/otlp_environment.h",
+        "include/opentelemetry/exporters/otlp/otlp_http.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_exporter_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_exporter_runtime_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_log_record_exporter_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_log_record_exporter_runtime_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_metric_exporter_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_http_metric_exporter_runtime_options.h",
+        "include/opentelemetry/exporters/otlp/otlp_preferred_temporality.h",
+    ],
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http",
+        "otlp_http_log",
+    ],
+    deps = [
+        "//api",
+        "//sdk:headers",
+    ],
+)
+
 # The OTLP/HTTP send path, with no protobuf on either end. The dep list is
 # what proves the send path needs no protobuf, so do not add a protobuf dep
 # here to fix a build error -- fix the split instead.
 cc_library(
     name = "otlp_http_transport",
-    srcs = [
-        "src/otlp_http.cc",
-        "src/otlp_http_transport.cc",
-    ],
+    srcs = ["src/otlp_http_transport.cc"],
     hdrs = [
         "include/opentelemetry/exporters/otlp/detail/otlp_http_transport.h",
-        "include/opentelemetry/exporters/otlp/otlp_environment.h",
-        "include/opentelemetry/exporters/otlp/otlp_http.h",
         "include/opentelemetry/exporters/otlp/otlp_http_client.h",
     ],
     copts = [
@@ -376,6 +405,7 @@ cc_library(
         "otlp_http_log",
     ],
     deps = [
+        ":otlp_http_exporter_options",
         ":otlp_json_writer",
         "//api",
         "//ext/src/http/client/curl:http_client_curl",
@@ -425,12 +455,48 @@ cc_library(
     ],
 )
 
+# The OTLP/JSON exporters for all three signals. The dep list is what proves
+# they need no protobuf, so do not add a protobuf dep here to fix a build
+# error -- fix the mapping or the transport instead.
+cc_library(
+    name = "otlp_json_http_exporter",
+    srcs = [
+        "src/otlp_json_http_exporter.cc",
+        "src/otlp_json_http_log_record_exporter.cc",
+        "src/otlp_json_http_metric_exporter.cc",
+        "src/otlp_json_http_send.cc",
+    ],
+    hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h",
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_http_send.h",
+        "include/opentelemetry/exporters/otlp/otlp_aggregation_temporality.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_exporter.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter.h",
+        "include/opentelemetry/exporters/otlp/otlp_json_http_metric_exporter.h",
+    ],
+    strip_include_prefix = "include",
+    tags = [
+        "otlp",
+        "otlp_http",
+        "otlp_http_log",
+    ],
+    deps = [
+        ":otlp_http_exporter_options",
+        ":otlp_http_transport",
+        ":otlp_json_mapping",
+        ":otlp_json_partial_success",
+        ":otlp_json_reader",
+        ":otlp_json_writer",
+        "//api",
+        "//sdk:headers",
+    ],
+)
+
 cc_library(
     name = "otlp_http_exporter",
     srcs = [
         "src/otlp_http_exporter.cc",
         "src/otlp_http_exporter_factory.cc",
-        "src/otlp_http_exporter_options.cc",
     ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/otlp_environment.h",
@@ -449,6 +515,7 @@ cc_library(
     deps = [
         ":otlp_common",
         ":otlp_http_client",
+        ":otlp_http_exporter_options",
         ":otlp_recordable",
         "//sdk/src/trace",
         "@com_github_opentelemetry_proto//:trace_service_proto_cc",
@@ -616,7 +683,6 @@ cc_library(
     srcs = [
         "src/otlp_http_metric_exporter.cc",
         "src/otlp_http_metric_exporter_factory.cc",
-        "src/otlp_http_metric_exporter_options.cc",
     ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/otlp_environment.h",
@@ -635,6 +701,7 @@ cc_library(
     deps = [
         ":otlp_common",
         ":otlp_http_client",
+        ":otlp_http_exporter_options",
         ":otlp_recordable",
         "//sdk/src/metrics",
         "@com_github_opentelemetry_proto//:metrics_service_proto_cc",
@@ -717,7 +784,6 @@ cc_library(
     srcs = [
         "src/otlp_http_log_record_exporter.cc",
         "src/otlp_http_log_record_exporter_factory.cc",
-        "src/otlp_http_log_record_exporter_options.cc",
     ],
     hdrs = [
         "include/opentelemetry/exporters/otlp/otlp_environment.h",
@@ -736,6 +802,7 @@ cc_library(
     deps = [
         ":otlp_common",
         ":otlp_http_client",
+        ":otlp_http_exporter_options",
         ":otlp_recordable",
         "//sdk/src/logs",
         "@com_github_opentelemetry_proto//:logs_service_proto_cc",
@@ -904,6 +971,48 @@ cc_test(
     deps = [
         ":otlp_json_partial_success",
         "//test_common:headers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_http_exporter_test",
+    srcs = ["test/otlp_json_http_exporter_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_exporter",
+        "//test_common/src/http/client/nosend:http_client_nosend",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_http_log_record_exporter_test",
+    srcs = ["test/otlp_json_http_log_record_exporter_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_exporter",
+        "//test_common/src/http/client/nosend:http_client_nosend",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "otlp_json_http_metric_exporter_test",
+    srcs = ["test/otlp_json_http_metric_exporter_test.cc"],
+    tags = [
+        "otlp",
+        "test",
+    ],
+    deps = [
+        ":otlp_json_http_exporter",
+        "//test_common/src/http/client/nosend:http_client_nosend",
         "@com_google_googletest//:gtest_main",
     ],
 )
