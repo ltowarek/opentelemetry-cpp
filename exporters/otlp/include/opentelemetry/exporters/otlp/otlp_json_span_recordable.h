@@ -6,12 +6,12 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "opentelemetry/common/attribute_value.h"
 #include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/common/timestamp.h"
+#include "opentelemetry/exporters/otlp/otlp_json_mapping.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/sdk/common/attribute_utils.h"
 #include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
@@ -50,9 +50,7 @@ namespace otlp
 class OtlpJsonSpanRecordable final : public opentelemetry::sdk::trace::Recordable
 {
 public:
-  /** A key and its value, in the order the span recorded them. */
-  using OrderedAttributes =
-      std::vector<std::pair<std::string, opentelemetry::sdk::common::OwnedAttributeValue>>;
+  using OrderedAttributes = json_mapping::OrderedAttributes;
 
   struct Event
   {
