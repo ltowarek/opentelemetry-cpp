@@ -14,6 +14,14 @@
 #include <opentelemetry/exporters/otlp/otlp_http_log_record_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_http_metric_exporter_factory.h>
 
+#include <opentelemetry/exporters/otlp/otlp_json_http_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_json_http_metric_exporter_factory.h>
+
+#include <opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h>
+#include <opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h>
+#include <opentelemetry/exporters/otlp/otlp_json_http_span_builder.h>
+
 #include <opentelemetry/exporters/otlp/otlp_http_log_record_builder.h>
 #include <opentelemetry/exporters/otlp/otlp_http_push_metric_builder.h>
 #include <opentelemetry/exporters/otlp/otlp_http_span_builder.h>
@@ -96,4 +104,72 @@ TEST(ExportersOtlpHttpBuilderInstall, OtlpHttpBuilderUtilsConvertOtlpHttpEncodin
             HttpRequestContentType::kJson);
   EXPECT_EQ(OtlpHttpBuilderUtils::ConvertOtlpHttpEncoding(OtlpHttpEncoding::protobuf),
             HttpRequestContentType::kBinary);
+TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpExporter)
+{
+  auto options  = opentelemetry::exporter::otlp::OtlpHttpExporterOptions();
+  auto exporter = opentelemetry::exporter::otlp::OtlpJsonHttpExporterFactory::Create(options);
+  ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpLogRecordExporter)
+{
+  auto options = opentelemetry::exporter::otlp::OtlpHttpLogRecordExporterOptions();
+  auto exporter =
+      opentelemetry::exporter::otlp::OtlpJsonHttpLogRecordExporterFactory::Create(options);
+  ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpMetricExporter)
+{
+  auto options = opentelemetry::exporter::otlp::OtlpHttpMetricExporterOptions();
+  auto exporter =
+      opentelemetry::exporter::otlp::OtlpJsonHttpMetricExporterFactory::Create(options);
+  ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpJsonHttpBuilderInstall, OtlpJsonHttpSpanBuilder)
+{
+  auto builder = std::make_unique<opentelemetry::exporter::otlp::OtlpJsonHttpSpanBuilder>();
+  ASSERT_TRUE(builder != nullptr);
+
+  opentelemetry::sdk::configuration::OtlpHttpSpanExporterConfiguration model;
+  model.endpoint    = "http://localhost:4318";
+  model.encoding    = opentelemetry::sdk::configuration::OtlpHttpEncoding::json;
+  model.timeout     = 12;
+  model.compression = "none";
+
+  auto exporter = builder->Build(&model);
+  ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpJsonHttpBuilderInstall, OtlpJsonHttpPushMetricBuilder)
+{
+  auto builder = std::make_unique<opentelemetry::exporter::otlp::OtlpJsonHttpPushMetricBuilder>();
+  ASSERT_TRUE(builder != nullptr);
+
+  opentelemetry::sdk::configuration::OtlpHttpPushMetricExporterConfiguration model;
+  model.endpoint    = "http://localhost:4318";
+  model.encoding    = opentelemetry::sdk::configuration::OtlpHttpEncoding::json;
+  model.timeout     = 12;
+  model.compression = "none";
+  model.temporality_preference =
+      opentelemetry::sdk::configuration::TemporalityPreference::cumulative;
+
+  auto exporter = builder->Build(&model);
+  ASSERT_TRUE(exporter != nullptr);
+}
+
+TEST(ExportersOtlpJsonHttpBuilderInstall, OtlpJsonHttpLogRecordBuilder)
+{
+  auto builder = std::make_unique<opentelemetry::exporter::otlp::OtlpJsonHttpLogRecordBuilder>();
+  ASSERT_TRUE(builder != nullptr);
+
+  opentelemetry::sdk::configuration::OtlpHttpLogRecordExporterConfiguration model;
+  model.endpoint    = "http://localhost:4318";
+  model.encoding    = opentelemetry::sdk::configuration::OtlpHttpEncoding::json;
+  model.timeout     = 12;
+  model.compression = "none";
+
+  auto exporter = builder->Build(&model);
+  ASSERT_TRUE(exporter != nullptr);
 }

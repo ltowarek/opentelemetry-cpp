@@ -74,6 +74,11 @@ target_include_directories(
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
          "$<INSTALL_INTERFACE:include>")
 
+# otlp_common rather than otlp_recordable: this target reads configuration
+# models and environment defaults and touches no recordable, and depending on
+# the protobuf one would pull the message runtime into every builder that links
+# it -- including the protobuf-free OTLP/JSON builders, whose whole point is
+# not to have it.
 target_link_libraries(
   opentelemetry_exporter_otlp_builder_utils
   PUBLIC opentelemetry_otlp_common opentelemetry_configuration_core)
