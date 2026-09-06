@@ -91,17 +91,7 @@ void WriteAttributesAndDroppedCount(
     const OtlpJsonSpanRecordable::OrderedAttributes &attributes,
     std::uint32_t dropped_count) noexcept
 {
-  if (!attributes.empty())
-  {
-    writer.Key("attributes");
-    writer.BeginArray();
-    for (const auto &attribute : attributes)
-    {
-      json_mapping::WriteKeyValue(writer, attribute.first, attribute.second,
-                                  json_mapping::AttributeMappingOptions{});
-    }
-    writer.EndArray();
-  }
+  json_mapping::WriteAttributes(writer, attributes);
   if (dropped_count != 0)
   {
     writer.Key("droppedAttributesCount");

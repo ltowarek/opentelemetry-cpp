@@ -5,7 +5,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 
 #include "opentelemetry/exporters/otlp/otlp_json_writer.h"
 #include "opentelemetry/nostd/string_view.h"
@@ -47,34 +46,51 @@ namespace otlp
 namespace json_mapping
 {
 
-/**
- * How attribute values are converted, mirroring AttributeConverterOptions on
- * the protobuf path. Resource and scope attributes are always converted with
- * the defaults; only span, event and link attributes carry a length limit.
- */
-struct AttributeMappingOptions
-{
-  // String values longer than this are truncated at a UTF-8 code point
-  // boundary; byte arrays are truncated at the raw byte boundary.
-  std::size_t attribute_value_length_limit = (std::numeric_limits<std::size_t>::max)();
-};
-
 /** Writes `size` bytes of `data` as a lowercase hex string. */
 void WriteHexId(JsonWriter &writer, const std::uint8_t *data, std::size_t size) noexcept;
 
 /** Writes a 64-bit value as a decimal string, as OTLP/JSON requires. */
 void WriteUInt64String(JsonWriter &writer, std::uint64_t value) noexcept;
 
-/** Writes an AnyValue object for `value`. */
+/**
+ * Writes an AnyValue object for `value`.
+ *
+ * Values arrive already truncated to whatever attribute_value_length_limit
+ * applied, because both paths convert -- and so truncate -- when the value is
+ * recorded rather than when it is written.
+ */
 void WriteAnyValue(JsonWriter &writer,
-                   const opentelemetry::sdk::common::OwnedAttributeValue &value,
-                   const AttributeMappingOptions &options) noexcept;
+                   const opentelemetry::sdk::common::OwnedAttributeValue &value) noexcept;
 
 /** Writes one KeyValue object: the key, and the AnyValue it maps to. */
 void WriteKeyValue(JsonWriter &writer,
                    nostd::string_view key,
-                   const opentelemetry::sdk::common::OwnedAttributeValue &value,
-                   const AttributeMappingOptions &options) noexcept;
+                   const opentelemetry::sdk::common::OwnedAttributeValue &value) noexcept;
+
+/**
+ * Writes the `attributes` array, and nothing at all when there are none: a
+ * repeated field holding no elements is absent rather than empty.
+ *
+ * A template because the attributes of a resource or a scope arrive in the
+ * SDK's map while a span's arrive in the recording order OTLP puts on the
+ * wire; both yield key/value pairs, which is all this needs.
+ */
+template <typename AttributeContainer>
+void WriteAttributes(JsonWriter &writer, const AttributeContainer &attributes) noexcept
+{
+  if (attributes.empty())
+  {
+    return;
+  }
+
+  writer.Key("attributes");
+  writer.BeginArray();
+  for (const auto &attribute : attributes)
+  {
+    WriteKeyValue(writer, attribute.first, attribute.second);
+  }
+  writer.EndArray();
+}
 
 /**
  * Writes the Resource message for `resource`, or null when it has no
