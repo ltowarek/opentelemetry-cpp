@@ -10,6 +10,7 @@
 #include "opentelemetry/exporters/otlp/otlp_json_mapping.h"
 #include "opentelemetry/exporters/otlp/otlp_json_writer.h"
 #include "opentelemetry/nostd/variant.h"
+#include "opentelemetry/sdk/instrumentationscope/instrumentation_scope.h"
 #include "opentelemetry/sdk/metrics/data/circular_buffer.h"
 #include "opentelemetry/sdk/metrics/data/metric_data.h"
 #include "opentelemetry/sdk/metrics/data/point_data.h"
@@ -93,6 +94,14 @@ void WriteDataPointTimestamps(JsonWriter &writer,
     json_mapping::WriteUInt64String(writer, time_unix_nano);
   }
 }
+
+/**
+ * Keys go out in proto field-number order throughout, so the two paths also
+ * agree under a writer backend that preserves insertion order. The order is
+ * per message rather than uniform: attributes are field 7 on a
+ * NumberDataPoint and 9 on a HistogramDataPoint, but field 1 on an
+ * ExponentialHistogramDataPoint, so that one writes them first.
+ */
 
 /** The NumberDataPoint that both sums and gauges carry. */
 void WriteNumberDataPoint(JsonWriter &writer,
@@ -194,6 +203,11 @@ void WriteExponentialHistogramDataPoint(JsonWriter &writer,
   // A point that carries neither bucket run is emitted as the timestamps
   // alone: it is still a point in the series, but there is nothing in it to
   // describe.
+  //
+  // The runs are then guarded one at a time. The protobuf path guards them
+  // only as a pair and dereferences both once either is set, so a point
+  // holding exactly one run is a state whose encoding there is undefined and
+  // byte-identity cannot be claimed for it.
   const bool has_buckets = point.positive_buckets_ != nullptr || point.negative_buckets_ != nullptr;
   if (!has_buckets)
   {
@@ -265,18 +279,16 @@ void WriteAggregationTemporality(JsonWriter &writer,
   }
 }
 
+/**
+ * The four data alternatives below are reached only through WriteMetric,
+ * which routes a collection with no points to kDrop and so leaves the oneof
+ * unset. None of them has to describe an empty message.
+ */
 void WriteSum(JsonWriter &writer, const metric_sdk::MetricData &metric_data) noexcept
 {
   const bool is_monotonic =
       metric_data.instrument_descriptor.type_ == metric_sdk::InstrumentType::kCounter ||
       metric_data.instrument_descriptor.type_ == metric_sdk::InstrumentType::kObservableCounter;
-  const std::int32_t temporality = MapAggregationTemporality(metric_data.aggregation_temporality);
-
-  if (metric_data.point_data_attr_.empty() && temporality == 0 && !is_monotonic)
-  {
-    writer.WriteNull();
-    return;
-  }
 
   const std::uint64_t start_ts =
       static_cast<std::uint64_t>(metric_data.start_ts.time_since_epoch().count());
@@ -284,19 +296,16 @@ void WriteSum(JsonWriter &writer, const metric_sdk::MetricData &metric_data) noe
       static_cast<std::uint64_t>(metric_data.end_ts.time_since_epoch().count());
 
   writer.BeginObject();
-  if (!metric_data.point_data_attr_.empty())
+  writer.Key("dataPoints");
+  writer.BeginArray();
+  for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
   {
-    writer.Key("dataPoints");
-    writer.BeginArray();
-    for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
-    {
-      const auto &sum_data =
-          nostd::get<metric_sdk::SumPointData>(point_data_with_attributes.point_data);
-      WriteNumberDataPoint(writer, point_data_with_attributes.attributes, sum_data.value_, start_ts,
-                           ts);
-    }
-    writer.EndArray();
+    const auto &sum_data =
+        nostd::get<metric_sdk::SumPointData>(point_data_with_attributes.point_data);
+    WriteNumberDataPoint(writer, point_data_with_attributes.attributes, sum_data.value_, start_ts,
+                         ts);
   }
+  writer.EndArray();
   WriteAggregationTemporality(writer, metric_data);
   if (is_monotonic)
   {
@@ -308,12 +317,6 @@ void WriteSum(JsonWriter &writer, const metric_sdk::MetricData &metric_data) noe
 
 void WriteGauge(JsonWriter &writer, const metric_sdk::MetricData &metric_data) noexcept
 {
-  if (metric_data.point_data_attr_.empty())
-  {
-    writer.WriteNull();
-    return;
-  }
-
   const std::uint64_t start_ts =
       static_cast<std::uint64_t>(metric_data.start_ts.time_since_epoch().count());
   const std::uint64_t ts =
@@ -335,32 +338,22 @@ void WriteGauge(JsonWriter &writer, const metric_sdk::MetricData &metric_data) n
 
 void WriteHistogram(JsonWriter &writer, const metric_sdk::MetricData &metric_data) noexcept
 {
-  const std::int32_t temporality = MapAggregationTemporality(metric_data.aggregation_temporality);
-  if (metric_data.point_data_attr_.empty() && temporality == 0)
-  {
-    writer.WriteNull();
-    return;
-  }
-
   const std::uint64_t start_ts =
       static_cast<std::uint64_t>(metric_data.start_ts.time_since_epoch().count());
   const std::uint64_t ts =
       static_cast<std::uint64_t>(metric_data.end_ts.time_since_epoch().count());
 
   writer.BeginObject();
-  if (!metric_data.point_data_attr_.empty())
+  writer.Key("dataPoints");
+  writer.BeginArray();
+  for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
   {
-    writer.Key("dataPoints");
-    writer.BeginArray();
-    for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
-    {
-      const auto &histogram_data =
-          nostd::get<metric_sdk::HistogramPointData>(point_data_with_attributes.point_data);
-      WriteHistogramDataPoint(writer, point_data_with_attributes.attributes, histogram_data,
-                              start_ts, ts);
-    }
-    writer.EndArray();
+    const auto &histogram_data =
+        nostd::get<metric_sdk::HistogramPointData>(point_data_with_attributes.point_data);
+    WriteHistogramDataPoint(writer, point_data_with_attributes.attributes, histogram_data, start_ts,
+                            ts);
   }
+  writer.EndArray();
   WriteAggregationTemporality(writer, metric_data);
   writer.EndObject();
 }
@@ -368,32 +361,22 @@ void WriteHistogram(JsonWriter &writer, const metric_sdk::MetricData &metric_dat
 void WriteExponentialHistogram(JsonWriter &writer,
                                const metric_sdk::MetricData &metric_data) noexcept
 {
-  const std::int32_t temporality = MapAggregationTemporality(metric_data.aggregation_temporality);
-  if (metric_data.point_data_attr_.empty() && temporality == 0)
-  {
-    writer.WriteNull();
-    return;
-  }
-
   const std::uint64_t start_ts =
       static_cast<std::uint64_t>(metric_data.start_ts.time_since_epoch().count());
   const std::uint64_t ts =
       static_cast<std::uint64_t>(metric_data.end_ts.time_since_epoch().count());
 
   writer.BeginObject();
-  if (!metric_data.point_data_attr_.empty())
+  writer.Key("dataPoints");
+  writer.BeginArray();
+  for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
   {
-    writer.Key("dataPoints");
-    writer.BeginArray();
-    for (const auto &point_data_with_attributes : metric_data.point_data_attr_)
-    {
-      const auto &histogram_data = nostd::get<metric_sdk::Base2ExponentialHistogramPointData>(
-          point_data_with_attributes.point_data);
-      WriteExponentialHistogramDataPoint(writer, point_data_with_attributes.attributes,
-                                         histogram_data, start_ts, ts);
-    }
-    writer.EndArray();
+    const auto &histogram_data = nostd::get<metric_sdk::Base2ExponentialHistogramPointData>(
+        point_data_with_attributes.point_data);
+    WriteExponentialHistogramDataPoint(writer, point_data_with_attributes.attributes,
+                                       histogram_data, start_ts, ts);
   }
+  writer.EndArray();
   WriteAggregationTemporality(writer, metric_data);
   writer.EndObject();
 }

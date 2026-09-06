@@ -39,8 +39,8 @@ Increment the:
 * [EXPORTER] Add a protobuf-free mapping from SDK metric data to OTLP/JSON:
   `ConvertMetricsToJson`, in the `opentelemetry_exporter_otlp_json_mapping`
   target. Sum, gauge, histogram and exponential histogram points are covered,
-  and an equivalence test asserts byte-identical JSON against the existing
-  reflection-based converter. Resource, scope and attribute mapping is shared
+  and twenty-three equivalence cases assert byte-identical JSON against the
+  existing reflection-based converter. Resource, scope and attribute mapping is shared
   with traces rather than duplicated. The target now also links
   `opentelemetry_metrics`.
 
