@@ -44,6 +44,13 @@ Increment the:
   with traces rather than duplicated. The target now also links
   `opentelemetry_metrics`.
 
+* [EXPORTER] Add a protobuf-free mapping from SDK log records to OTLP/JSON:
+  `OtlpJsonLogRecordable` plus `ConvertLogsToJson`, in the
+  `opentelemetry_exporter_otlp_json_mapping` target. Fifteen equivalence cases
+  assert byte-identical JSON against the existing reflection-based converter.
+  Resource, scope and attribute mapping is shared with traces rather than
+  duplicated. The target now also links `opentelemetry_logs`.
+
 * [EXPORTER] Fix the protobuf-free OTLP/JSON mapping emitting an array
   attribute holding no elements as `{"arrayValue":{"values":[]}}`. The
   reflection-based converter emits `{"arrayValue":null}`, because the

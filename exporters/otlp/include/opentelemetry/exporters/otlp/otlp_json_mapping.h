@@ -5,6 +5,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "opentelemetry/exporters/otlp/otlp_json_writer.h"
 #include "opentelemetry/nostd/string_view.h"
@@ -45,6 +48,16 @@ namespace otlp
  */
 namespace json_mapping
 {
+
+/**
+ * A key and its value, in the order the signal recorded them.
+ *
+ * OTLP puts attributes in a JSON array, whose order is on the wire, so the
+ * recordables that feed this mapping keep them in a sequence rather than in
+ * the SDK's unordered map.
+ */
+using OrderedAttributes =
+    std::vector<std::pair<std::string, opentelemetry::sdk::common::OwnedAttributeValue>>;
 
 /** Writes `size` bytes of `data` as a lowercase hex string. */
 void WriteHexId(JsonWriter &writer, const std::uint8_t *data, std::size_t size) noexcept;
