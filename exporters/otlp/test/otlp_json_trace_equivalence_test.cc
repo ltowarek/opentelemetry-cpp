@@ -295,6 +295,21 @@ TEST(OtlpJsonTraceEquivalence, EmptyResourceAndScopeAreNull)
       << encodings.protobuf_free;
 }
 
+// An array attribute holding no elements: the protobuf path creates the
+// ArrayValue and never puts a value in it, leaving a message with no field set.
+TEST(OtlpJsonTraceEquivalence, EmptyArrayAttributes)
+{
+  auto encodings = EncodeBothWays(1, [](std::size_t, sdk_trace::Recordable &recordable) {
+    recordable.SetIdentity(MakeSpanContext(kTraceIdBytes, kSpanIdBytes), trace_api::SpanId());
+    recordable.SetAttribute("empty_bool_array",
+                            nostd::span<const bool>(nullptr, static_cast<std::size_t>(0)));
+    recordable.SetAttribute("empty_string_array", nostd::span<const nostd::string_view>(
+                                                      nullptr, static_cast<std::size_t>(0)));
+  });
+
+  EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
+}
+
 TEST(OtlpJsonTraceEquivalence, NanosecondTimestampsSurviveAsStrings)
 {
   // Beyond 2^53, where a JSON number would lose the low bits to double
