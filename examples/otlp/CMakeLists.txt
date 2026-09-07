@@ -53,7 +53,7 @@ if(OTELCPP_WITH_OTLP_GRPC)
   endif()
 endif()
 
-if(OTELCPP_WITH_OTLP_HTTP)
+if(OTELCPP_WITH_OTLP_HTTP AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
   # TRACE
 
   add_executable(example_otlp_http http_main.cc)
