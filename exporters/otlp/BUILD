@@ -38,6 +38,12 @@ cc_library(
     ],
 )
 
+# Builds the OTLP protobuf messages from SDK data. Requesting only a
+# protobuf-free OTLP/JSON target (e.g. :otlp_json_http_exporter) never
+# depends on this and never fetches @com_github_opentelemetry_proto or
+# @com_google_protobuf -- Bazel resolves deps per requested target, which is
+# what mirrors OTELCPP_OTLP_PROTOBUF_REQUIRED in the CMake build without
+# needing a flag of its own here.
 cc_library(
     name = "otlp_recordable",
     srcs = [
@@ -199,6 +205,10 @@ cc_library(
     ],
 )
 
+# The reflection-based protobuf-to-JSON converter shared by the OTLP/file
+# and protobuf-based OTLP/HTTP exporters, both of which already depend on
+# protobuf. The protobuf-free OTLP/JSON exporters use :otlp_json_writer
+# instead and never depend on this target.
 cc_library(
     name = "otlp_json_converter",
     srcs = [
@@ -415,6 +425,9 @@ cc_library(
     ],
 )
 
+# The protobuf-based send path. :otlp_json_http_client below covers the same
+# role for the OTLP/JSON exporters and depends on neither this target nor
+# protobuf.
 cc_library(
     name = "otlp_http_client",
     srcs = [

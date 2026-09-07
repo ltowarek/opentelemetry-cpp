@@ -7,7 +7,7 @@ if(OTELCPP_WITH_OTLP_GRPC)
                         opentelemetry_trace opentelemetry_exporter_otlp_grpc)
 endif()
 
-if(OTELCPP_WITH_OTLP_HTTP)
+if(OTELCPP_WITH_OTLP_HTTP AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
   add_executable(func_otlp_http func_http_main.cc)
   target_link_libraries(func_otlp_http ${CMAKE_THREAD_LIBS_INIT}
                         opentelemetry_trace opentelemetry_exporter_otlp_http)

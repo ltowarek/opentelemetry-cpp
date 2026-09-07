@@ -369,6 +369,17 @@ otelcpp_dependent_option(
   OFF)
 
 #
+# Do we need the protobuf-based OTLP/HTTP exporters ?
+#
+
+otelcpp_dependent_option(
+  OTELCPP_WITH_OTLP_HTTP_PROTOBUF
+  "Build the protobuf-based OTLP/HTTP exporters. Set OFF to build only the OTLP/JSON ones."
+  ON
+  "OTELCPP_WITH_OTLP_HTTP"
+  OFF)
+
+#
 # Locally override options if OTELCPP_WITH_API_ONLY is set to prevent third
 # party dependencies from being imported
 #
@@ -387,6 +398,7 @@ if(OTELCPP_WITH_API_ONLY)
   otelcpp_set_option(OTELCPP_WITH_CONFIGURATION OFF)
   otelcpp_set_option(OTELCPP_WITH_HTTP_CLIENT_CURL OFF)
   otelcpp_set_option(OTELCPP_WITH_JSON_WRITER_NLOHMANN OFF)
+  otelcpp_set_option(OTELCPP_WITH_OTLP_HTTP_PROTOBUF OFF)
   otelcpp_set_option(OTELCPP_WITH_OTLP_HTTP_COMPRESSION OFF)
   otelcpp_set_option(OTELCPP_WITH_BENCHMARK OFF)
   otelcpp_set_option(OTELCPP_WITH_FUNC_TESTS OFF)
@@ -421,10 +433,20 @@ endif()
 #
 # Do we need protobuf and/or gRPC ?
 #
+# OTLP/HTTP only pulls protobuf in when its protobuf-based exporters are
+# selected; the OTLP/JSON exporters under OTELCPP_WITH_OTLP_HTTP need neither
+# protobuf nor Abseil. exporters/otlp/CMakeLists.txt gates the targets that
+# reference protobuf on this same condition.
+#
 
+set(OTELCPP_OTLP_PROTOBUF_REQUIRED OFF)
 if(OTELCPP_WITH_OTLP_GRPC
-   OR OTELCPP_WITH_OTLP_HTTP
+   OR (OTELCPP_WITH_OTLP_HTTP AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
    OR OTELCPP_WITH_OTLP_FILE)
+  set(OTELCPP_OTLP_PROTOBUF_REQUIRED ON)
+endif()
+
+if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
 
   # find or fetch grpc before protobuf to allow protobuf to be built in-tree as
   # a grpc submodule.
@@ -617,6 +639,8 @@ message(STATUS "opentelemetry-cpp cmake component options")
 message(STATUS "---------------------------------------------")
 message(STATUS "OTELCPP_WITH_OTLP_GRPC: ${OTELCPP_WITH_OTLP_GRPC}")
 message(STATUS "OTELCPP_WITH_OTLP_HTTP: ${OTELCPP_WITH_OTLP_HTTP}")
+message(
+  STATUS "OTELCPP_WITH_OTLP_HTTP_PROTOBUF: ${OTELCPP_WITH_OTLP_HTTP_PROTOBUF}")
 message(STATUS "OTELCPP_WITH_OTLP_FILE: ${OTELCPP_WITH_OTLP_FILE}")
 message(
   STATUS "OTELCPP_WITH_HTTP_CLIENT_CURL: ${OTELCPP_WITH_HTTP_CLIENT_CURL}")

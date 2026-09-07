@@ -31,31 +31,38 @@ set(OPENTELEMETRY_OTLP_TARGETS opentelemetry_otlp_common)
 #
 # opentelemetry_otlp_recordable
 #
+# Builds the OTLP protobuf messages from SDK data, so it exists only where
+# protobuf is materialized (see OTELCPP_OTLP_PROTOBUF_REQUIRED in the
+# top-level CMakeLists.txt). The protobuf-free OTLP/JSON exporters use
+# opentelemetry_exporter_otlp_json_mapping instead.
+#
 
-add_library(
-  opentelemetry_otlp_recordable
-  ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_log_recordable.cc
-  src/otlp_recordable.cc src/otlp_populate_attribute_utils.cc
-  src/otlp_recordable_utils.cc src/otlp_metric_utils.cc)
-set_target_properties(opentelemetry_otlp_recordable PROPERTIES EXPORT_NAME
-                                                               otlp_recordable)
-set_target_version(opentelemetry_otlp_recordable)
+if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
+  add_library(
+    opentelemetry_otlp_recordable
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_log_recordable.cc
+    src/otlp_recordable.cc src/otlp_populate_attribute_utils.cc
+    src/otlp_recordable_utils.cc src/otlp_metric_utils.cc)
+  set_target_properties(opentelemetry_otlp_recordable
+                        PROPERTIES EXPORT_NAME otlp_recordable)
+  set_target_version(opentelemetry_otlp_recordable)
 
-target_include_directories(
-  opentelemetry_otlp_recordable
-  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-         "$<INSTALL_INTERFACE:include>")
+  target_include_directories(
+    opentelemetry_otlp_recordable
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+           "$<INSTALL_INTERFACE:include>")
 
-list(APPEND OPENTELEMETRY_OTLP_TARGETS opentelemetry_otlp_recordable)
+  list(APPEND OPENTELEMETRY_OTLP_TARGETS opentelemetry_otlp_recordable)
 
-target_link_libraries(opentelemetry_otlp_recordable
-                      PUBLIC opentelemetry_logs opentelemetry_metrics)
-
-if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
   target_link_libraries(opentelemetry_otlp_recordable
-                        PRIVATE utf8_range::utf8_validity)
-  target_compile_definitions(opentelemetry_otlp_recordable
-                             PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+                        PUBLIC opentelemetry_logs opentelemetry_metrics)
+
+  if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
+    target_link_libraries(opentelemetry_otlp_recordable
+                          PRIVATE utf8_range::utf8_validity)
+    target_compile_definitions(opentelemetry_otlp_recordable
+                               PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+  endif()
 endif()
 
 #
@@ -89,12 +96,14 @@ if(OTELCPP_INSTALL)
     "Common environment variable reading for OTLP exporters."
     "opentelemetry_common")
 
-  opentelemetry_add_pkgconfig(
-    otlp_recordable
-    "OpenTelemetry OTLP - Recordable"
-    "OTLP recordable implementation for spans, metrics, and logs."
-    "opentelemetry_trace opentelemetry_metrics opentelemetry_logs opentelemetry_resources opentelemetry_proto"
-  )
+  if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
+    opentelemetry_add_pkgconfig(
+      otlp_recordable
+      "OpenTelemetry OTLP - Recordable"
+      "OTLP recordable implementation for spans, metrics, and logs."
+      "opentelemetry_trace opentelemetry_metrics opentelemetry_logs opentelemetry_resources opentelemetry_proto"
+    )
+  endif()
 
   opentelemetry_add_pkgconfig(
     exporter_otlp_builder_utils "OpenTelemetry OTLP - Builder Utils"
@@ -320,33 +329,39 @@ endif()
 #
 # opentelemetry_exporter_otlp_json_converter
 #
+# The reflection-based protobuf-to-JSON converter shared by the OTLP/file
+# exporter and the protobuf-based OTLP/HTTP exporters, both of which already
+# require protobuf. The protobuf-free OTLP/JSON exporters use
+# opentelemetry_exporter_otlp_json_mapping instead and never link this.
+#
 
-add_library(opentelemetry_exporter_otlp_json_converter
-            ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_converter.cc)
+if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
+  add_library(opentelemetry_exporter_otlp_json_converter
+              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_converter.cc)
 
-set_target_properties(opentelemetry_exporter_otlp_json_converter
-                      PROPERTIES EXPORT_NAME otlp_json_converter)
-set_target_version(opentelemetry_exporter_otlp_json_converter)
+  set_target_properties(opentelemetry_exporter_otlp_json_converter
+                        PROPERTIES EXPORT_NAME otlp_json_converter)
+  set_target_version(opentelemetry_exporter_otlp_json_converter)
 
-target_include_directories(
-  opentelemetry_exporter_otlp_json_converter
-  PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-         "$<INSTALL_INTERFACE:include>")
+  target_include_directories(
+    opentelemetry_exporter_otlp_json_converter
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+           "$<INSTALL_INTERFACE:include>")
 
-target_link_libraries(
-  opentelemetry_exporter_otlp_json_converter
-  PUBLIC opentelemetry_sdk opentelemetry_common
-         opentelemetry_exporter_otlp_json_writer
-         "$<BUILD_INTERFACE:opentelemetry_proto>"
-  PRIVATE "$<INSTALL_INTERFACE:opentelemetry_proto>")
+  target_link_libraries(
+    opentelemetry_exporter_otlp_json_converter
+    PUBLIC opentelemetry_sdk opentelemetry_common
+           opentelemetry_exporter_otlp_json_writer
+           "$<BUILD_INTERFACE:opentelemetry_proto>"
+    PRIVATE "$<INSTALL_INTERFACE:opentelemetry_proto>")
 
-if(OTELCPP_INSTALL)
-  opentelemetry_add_pkgconfig(
-    exporter_otlp_json_converter
-    "OpenTelemetry OTLP - JSON Converter"
-    "Shared reflection-based protobuf-to-JSON converter for OTLP/JSON exporters."
-    "opentelemetry_sdk opentelemetry_common opentelemetry_exporter_otlp_json_writer"
-  )
+  if(OTELCPP_INSTALL)
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_json_converter "OpenTelemetry OTLP - JSON Converter"
+      "Shared reflection-based protobuf-to-JSON converter for OTLP/JSON exporters."
+      "opentelemetry_sdk opentelemetry_common opentelemetry_exporter_otlp_json_writer"
+    )
+  endif()
 endif()
 
 if(OTELCPP_WITH_OTLP_GRPC)
@@ -629,30 +644,36 @@ if(OTELCPP_WITH_OTLP_HTTP)
   #
   # opentelemetry_exporter_otlp_http_client
   #
+  # The protobuf-based send path, kept only when OTELCPP_WITH_OTLP_HTTP_PROTOBUF
+  # is on -- the OTLP/JSON exporters use opentelemetry_exporter_otlp_json_http_client
+  # instead and never link this or opentelemetry_proto.
+  #
 
-  add_library(opentelemetry_exporter_otlp_http_client
-              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_client.cc)
-  set_target_properties(opentelemetry_exporter_otlp_http_client
-                        PROPERTIES EXPORT_NAME otlp_http_client)
-  set_target_version(opentelemetry_exporter_otlp_http_client)
+  if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
+    add_library(opentelemetry_exporter_otlp_http_client
+                ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_client.cc)
+    set_target_properties(opentelemetry_exporter_otlp_http_client
+                          PROPERTIES EXPORT_NAME otlp_http_client)
+    set_target_version(opentelemetry_exporter_otlp_http_client)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_client
-    PUBLIC opentelemetry_ext "$<BUILD_INTERFACE:opentelemetry_proto>"
-    PRIVATE "$<INSTALL_INTERFACE:opentelemetry_proto>")
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_client
+      PUBLIC opentelemetry_ext "$<BUILD_INTERFACE:opentelemetry_proto>"
+      PRIVATE "$<INSTALL_INTERFACE:opentelemetry_proto>")
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_client
-    PUBLIC opentelemetry_http_client opentelemetry_exporter_otlp_http_transport
-    PRIVATE opentelemetry_common opentelemetry_exporter_otlp_json_converter)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_client
+      PUBLIC opentelemetry_http_client opentelemetry_exporter_otlp_http_transport
+      PRIVATE opentelemetry_common opentelemetry_exporter_otlp_json_converter)
 
-  target_include_directories(
-    opentelemetry_exporter_otlp_http_client
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-           "$<INSTALL_INTERFACE:include>")
+    target_include_directories(
+      opentelemetry_exporter_otlp_http_client
+      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+             "$<INSTALL_INTERFACE:include>")
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
-       opentelemetry_exporter_otlp_http_client)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+         opentelemetry_exporter_otlp_http_client)
+  endif()
 
   #
   # opentelemetry_exporter_otlp_http_options
@@ -839,6 +860,14 @@ if(OTELCPP_WITH_OTLP_HTTP)
        opentelemetry_exporter_otlp_json_http_metric_builder)
 
   #
+  # opentelemetry_exporter_otlp_http and friends: the protobuf-based OTLP/HTTP
+  # exporters, built only when OTELCPP_WITH_OTLP_HTTP_PROTOBUF is on. The
+  # OTLP/JSON exporters above cover the protobuf-free path.
+  #
+
+  if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
+
+  #
   # opentelemetry_exporter_otlp_http
   #
 
@@ -983,52 +1012,56 @@ if(OTELCPP_WITH_OTLP_HTTP)
   list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
        opentelemetry_exporter_otlp_http_metric_builder)
 
+  endif() # OTELCPP_WITH_OTLP_HTTP_PROTOBUF
+
   if(OTELCPP_INSTALL)
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_client "OpenTelemetry OTLP - HTTP Client"
-      "HTTP client for OTLP protocol." "opentelemetry_api")
+    if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_client "OpenTelemetry OTLP - HTTP Client"
+        "HTTP client for OTLP protocol." "opentelemetry_api")
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http
-      "OpenTelemetry OTLP - HTTP Span Exporter"
-      "Exports trace spans via OTLP HTTP."
-      "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http
+        "OpenTelemetry OTLP - HTTP Span Exporter"
+        "Exports trace spans via OTLP HTTP."
+        "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
+      )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_builder
-      "OpenTelemetry OTLP - HTTP Span Builder"
-      "Builder for OTLP HTTP span exporter."
-      "opentelemetry_exporter_otlp_http opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_builder
+        "OpenTelemetry OTLP - HTTP Span Builder"
+        "Builder for OTLP HTTP span exporter."
+        "opentelemetry_exporter_otlp_http opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
+      )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_log
-      "OpenTelemetry OTLP - HTTP Log Exporter"
-      "Exports log records via OTLP HTTP."
-      "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_log
+        "OpenTelemetry OTLP - HTTP Log Exporter"
+        "Exports log records via OTLP HTTP."
+        "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
+      )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_log_builder
-      "OpenTelemetry OTLP - HTTP Log Builder"
-      "Builder for OTLP HTTP log record exporter."
-      "opentelemetry_exporter_otlp_http_log opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_log_builder
+        "OpenTelemetry OTLP - HTTP Log Builder"
+        "Builder for OTLP HTTP log record exporter."
+        "opentelemetry_exporter_otlp_http_log opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
+      )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_metric
-      "OpenTelemetry OTLP - HTTP Metric Exporter"
-      "Exports metrics via OTLP HTTP."
-      "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_metric
+        "OpenTelemetry OTLP - HTTP Metric Exporter"
+        "Exports metrics via OTLP HTTP."
+        "opentelemetry_otlp_common opentelemetry_otlp_recordable opentelemetry_exporter_otlp_http_client"
+      )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_http_metric_builder
-      "OpenTelemetry OTLP - HTTP Metric Builder"
-      "Builder for OTLP HTTP metric exporter."
-      "opentelemetry_exporter_otlp_http_metric opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
-    )
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_http_metric_builder
+        "OpenTelemetry OTLP - HTTP Metric Builder"
+        "Builder for OTLP HTTP metric exporter."
+        "opentelemetry_exporter_otlp_http_metric opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
+      )
+    endif()
 
     opentelemetry_add_pkgconfig(
       exporter_otlp_json_http_client
@@ -1297,9 +1330,22 @@ if(OTELCPP_WITH_OTLP_FILE)
 
 endif()
 
-target_link_libraries(
-  opentelemetry_otlp_recordable
-  PUBLIC opentelemetry_trace opentelemetry_resources opentelemetry_proto)
+set(OPENTELEMETRY_OTLP_EXPORTERS_COMMON_TARGETS
+    opentelemetry_otlp_common opentelemetry_exporter_otlp_builder_utils
+    opentelemetry_exporter_otlp_json_mapping
+    ${OPENTELEMETRY_OTLP_JSON_WRITER_TARGETS}
+    ${OPENTELEMETRY_OTLP_JSON_READER_TARGETS}
+    opentelemetry_exporter_otlp_json_partial_success)
+
+if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
+  target_link_libraries(
+    opentelemetry_otlp_recordable
+    PUBLIC opentelemetry_trace opentelemetry_resources opentelemetry_proto)
+
+  list(APPEND OPENTELEMETRY_OTLP_EXPORTERS_COMMON_TARGETS
+       opentelemetry_otlp_recordable opentelemetry_proto
+       opentelemetry_exporter_otlp_json_converter)
+endif()
 
 otel_add_component(
   COMPONENT
@@ -1307,15 +1353,7 @@ otel_add_component(
   DEPRECATED_NAMES
   exporters_otlp_builder_utils
   TARGETS
-  opentelemetry_otlp_common
-  opentelemetry_otlp_recordable
-  opentelemetry_proto
-  opentelemetry_exporter_otlp_builder_utils
-  opentelemetry_exporter_otlp_json_converter
-  opentelemetry_exporter_otlp_json_mapping
-  ${OPENTELEMETRY_OTLP_JSON_WRITER_TARGETS}
-  ${OPENTELEMETRY_OTLP_JSON_READER_TARGETS}
-  opentelemetry_exporter_otlp_json_partial_success
+  ${OPENTELEMETRY_OTLP_EXPORTERS_COMMON_TARGETS}
   FILES_DIRECTORY
   "include/opentelemetry/exporters/otlp"
   FILES_DESTINATION
@@ -1391,55 +1429,61 @@ if(OTELCPP_WITH_OTLP_FILE)
 endif()
 
 if(OTELCPP_BUILD_TESTING)
-  add_executable(otlp_recordable_test test/otlp_recordable_test.cc)
-  target_link_libraries(
-    otlp_recordable_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-    opentelemetry_otlp_recordable protobuf::libprotobuf)
-  gtest_add_tests(
-    TARGET otlp_recordable_test
-    TEST_PREFIX exporter.otlp.
-    TEST_LIST otlp_recordable_test)
+  # otlp_recordable is only built when protobuf is materialized; these tests
+  # exercise it directly.
+  if(OTELCPP_OTLP_PROTOBUF_REQUIRED)
+    add_executable(otlp_recordable_test test/otlp_recordable_test.cc)
+    target_link_libraries(
+      otlp_recordable_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
+      opentelemetry_otlp_recordable protobuf::libprotobuf)
+    gtest_add_tests(
+      TARGET otlp_recordable_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_recordable_test)
 
-  add_executable(otlp_log_recordable_test test/otlp_log_recordable_test.cc)
-  target_link_libraries(otlp_log_recordable_test ${GTEST_BOTH_LIBRARIES}
-                        ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable)
-  if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
-    target_compile_definitions(otlp_log_recordable_test
-                               PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+    add_executable(otlp_log_recordable_test test/otlp_log_recordable_test.cc)
+    target_link_libraries(
+      otlp_log_recordable_test ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable)
+    if(OTELCPP_WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
+      target_compile_definitions(otlp_log_recordable_test
+                                 PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+    endif()
+    gtest_add_tests(
+      TARGET otlp_log_recordable_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_log_recordable_test)
+
+    add_executable(otlp_populate_attribute_utils_test
+                   test/otlp_populate_attribute_utils_test.cc)
+    target_link_libraries(
+      otlp_populate_attribute_utils_test ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable)
+    if(WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
+      target_compile_definitions(otlp_populate_attribute_utils_test
+                                 PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
+    endif()
+    gtest_add_tests(
+      TARGET otlp_populate_attribute_utils_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_populate_attribute_utils_test)
+
+    add_executable(otlp_metrics_serialization_test
+                   test/otlp_metrics_serialization_test.cc)
+    target_link_libraries(
+      otlp_metrics_serialization_test ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable
+      protobuf::libprotobuf)
+    gtest_add_tests(
+      TARGET otlp_metrics_serialization_test
+      TEST_PREFIX exporter.otlp.
+      TEST_LIST otlp_metrics_serialization_test)
   endif()
-  gtest_add_tests(
-    TARGET otlp_log_recordable_test
-    TEST_PREFIX exporter.otlp.
-    TEST_LIST otlp_log_recordable_test)
-
-  add_executable(otlp_populate_attribute_utils_test
-                 test/otlp_populate_attribute_utils_test.cc)
-  target_link_libraries(
-    otlp_populate_attribute_utils_test ${GTEST_BOTH_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable)
-  if(WITH_OTLP_UTF8_VALIDITY AND TARGET utf8_range::utf8_validity)
-    target_compile_definitions(otlp_populate_attribute_utils_test
-                               PRIVATE ENABLE_OTLP_UTF8_VALIDITY)
-  endif()
-  gtest_add_tests(
-    TARGET otlp_populate_attribute_utils_test
-    TEST_PREFIX exporter.otlp.
-    TEST_LIST otlp_populate_attribute_utils_test)
-
-  add_executable(otlp_metrics_serialization_test
-                 test/otlp_metrics_serialization_test.cc)
-  target_link_libraries(
-    otlp_metrics_serialization_test ${GTEST_BOTH_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT} opentelemetry_otlp_recordable
-    protobuf::libprotobuf)
-  gtest_add_tests(
-    TARGET otlp_metrics_serialization_test
-    TEST_PREFIX exporter.otlp.
-    TEST_LIST otlp_metrics_serialization_test)
 
   # Compares the two mappings through one writer, so it needs a backend to
-  # produce bytes with, and the protobuf path to compare against.
-  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+  # produce bytes with, and the protobuf path (only present when protobuf is
+  # materialized) to compare against.
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN AND OTELCPP_OTLP_PROTOBUF_REQUIRED)
     add_executable(otlp_json_trace_equivalence_test
                    test/otlp_json_trace_equivalence_test.cc)
     target_link_libraries(
@@ -1606,7 +1650,9 @@ if(OTELCPP_BUILD_TESTING)
   endif()
 
   if(OTELCPP_WITH_OTLP_HTTP)
-    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    # Only built for the protobuf exporter; the OTLP/JSON exporter has its
+    # own tests below.
+    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
       add_executable(otlp_http_exporter_test test/otlp_http_exporter_test.cc)
       target_link_libraries(
         otlp_http_exporter_test
@@ -1696,6 +1742,10 @@ if(OTELCPP_BUILD_TESTING)
       TARGET otlp_http_transport_test
       TEST_PREFIX exporter.otlp.
       TEST_LIST otlp_http_transport_test)
+
+    # The protobuf-based OTLP/HTTP exporters and everything below that tests
+    # them; the OTLP/JSON exporter tests above stand on their own.
+    if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
 
     add_executable(otlp_http_exporter_factory_test
                    test/otlp_http_exporter_factory_test.cc)
@@ -1851,6 +1901,8 @@ if(OTELCPP_BUILD_TESTING)
         TEST_PREFIX exporter.otlp.
         TEST_LIST otlp_http_log_record_exporter_custom_json_writer_test)
     endif()
+
+    endif() # OTELCPP_WITH_OTLP_HTTP_PROTOBUF
   endif()
 
   if(OTELCPP_WITH_OTLP_FILE)
@@ -1958,7 +2010,8 @@ endif() # OTELCPP_BUILD_TESTING
 
 if(OTELCPP_BUILD_TESTING
    AND OTELCPP_WITH_BENCHMARK
-   AND OTELCPP_WITH_OTLP_HTTP)
+   AND OTELCPP_WITH_OTLP_HTTP
+   AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
   add_executable(otlp_http_metric_exporter_benchmark
                  benchmark/otlp_http_metric_exporter_benchmark.cc)
 
@@ -1969,7 +2022,7 @@ if(OTELCPP_BUILD_TESTING
             ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-if(OTELCPP_BUILD_TESTING AND OTELCPP_WITH_BENCHMARK)
+if(OTELCPP_BUILD_TESTING AND OTELCPP_WITH_BENCHMARK AND OTELCPP_OTLP_PROTOBUF_REQUIRED)
   add_executable(otlp_recordable_benchmark test/otlp_recordable_benchmark.cc)
 
   target_link_libraries(
