@@ -40,6 +40,6 @@ if(OTELCPP_WITH_CONFIGURATION)
   add_subdirectory(configuration)
 endif()
 
-if(OTELCPP_WITH_OTLP_HTTP)
+if(OTELCPP_WITH_OTLP_HTTP AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
   add_subdirectory(custom_http_client)
 endif()
