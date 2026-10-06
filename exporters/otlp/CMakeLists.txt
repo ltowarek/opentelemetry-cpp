@@ -806,66 +806,71 @@ if(OTELCPP_WITH_OTLP_HTTP)
   list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
        opentelemetry_exporter_otlp_json_http_metric)
 
-  #
-  # opentelemetry_exporter_otlp_json_http_builder
-  #
+  # A configuration file names an exporter but cannot hand it a JsonWriterFactory, so a
+  # builder is only usable when a backend is compiled in; registering one without a backend
+  # would produce an exporter that terminates on its first export.
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    #
+    # opentelemetry_exporter_otlp_json_http_builder
+    #
 
-  add_library(opentelemetry_exporter_otlp_json_http_builder
-              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
+    add_library(opentelemetry_exporter_otlp_json_http_builder
+                ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
 
-  set_target_properties(opentelemetry_exporter_otlp_json_http_builder
-                        PROPERTIES EXPORT_NAME otlp_json_http_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_json_http_builder)
+    set_target_properties(opentelemetry_exporter_otlp_json_http_builder
+                          PROPERTIES EXPORT_NAME otlp_json_http_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_json_http_builder)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_json_http_builder
-    PUBLIC opentelemetry_exporter_otlp_json_http
-    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_json_http_builder
+      PUBLIC opentelemetry_exporter_otlp_json_http
+      PRIVATE opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_json_http_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_json_http_builder)
 
-  #
-  # opentelemetry_exporter_otlp_json_http_log_builder
-  #
+    #
+    # opentelemetry_exporter_otlp_json_http_log_builder
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_json_http_log_builder
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_json_http_log_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_builder.cc)
 
-  set_target_properties(
-    opentelemetry_exporter_otlp_json_http_log_builder
-    PROPERTIES EXPORT_NAME otlp_json_http_log_record_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_json_http_log_builder)
+    set_target_properties(
+      opentelemetry_exporter_otlp_json_http_log_builder
+      PROPERTIES EXPORT_NAME otlp_json_http_log_record_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_json_http_log_builder)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_json_http_log_builder
-    PUBLIC opentelemetry_exporter_otlp_json_http_log
-    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_json_http_log_builder
+      PUBLIC opentelemetry_exporter_otlp_json_http_log
+      PRIVATE opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_json_http_log_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_json_http_log_builder)
 
-  #
-  # opentelemetry_exporter_otlp_json_http_metric_builder
-  #
+    #
+    # opentelemetry_exporter_otlp_json_http_metric_builder
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_json_http_metric_builder
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_push_metric_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_json_http_metric_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_push_metric_builder.cc)
 
-  set_target_properties(
-    opentelemetry_exporter_otlp_json_http_metric_builder
-    PROPERTIES EXPORT_NAME otlp_json_http_metric_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_json_http_metric_builder)
+    set_target_properties(
+      opentelemetry_exporter_otlp_json_http_metric_builder
+      PROPERTIES EXPORT_NAME otlp_json_http_metric_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_json_http_metric_builder)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_json_http_metric_builder
-    PUBLIC opentelemetry_exporter_otlp_json_http_metric
-    PRIVATE opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_json_http_metric_builder
+      PUBLIC opentelemetry_exporter_otlp_json_http_metric
+      PRIVATE opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_json_http_metric_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_json_http_metric_builder)
+  endif()
 
   #
   # opentelemetry_exporter_otlp_http and friends: the protobuf-based OTLP/HTTP
@@ -1088,12 +1093,14 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
     )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_json_http_builder
-      "OpenTelemetry OTLP - JSON HTTP Span Builder"
-      "Builder for the protobuf-free OTLP/JSON HTTP span exporter."
-      "opentelemetry_exporter_otlp_json_http opentelemetry_exporter_otlp_builder_utils"
-    )
+    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_json_http_builder
+        "OpenTelemetry OTLP - JSON HTTP Span Builder"
+        "Builder for the protobuf-free OTLP/JSON HTTP span exporter."
+        "opentelemetry_exporter_otlp_json_http opentelemetry_exporter_otlp_builder_utils"
+      )
+    endif()
 
     opentelemetry_add_pkgconfig(
       exporter_otlp_json_http_log
@@ -1102,12 +1109,14 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
     )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_json_http_log_builder
-      "OpenTelemetry OTLP - JSON HTTP Log Builder"
-      "Builder for the protobuf-free OTLP/JSON HTTP log record exporter."
-      "opentelemetry_exporter_otlp_json_http_log opentelemetry_exporter_otlp_builder_utils"
-    )
+    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_json_http_log_builder
+        "OpenTelemetry OTLP - JSON HTTP Log Builder"
+        "Builder for the protobuf-free OTLP/JSON HTTP log record exporter."
+        "opentelemetry_exporter_otlp_json_http_log opentelemetry_exporter_otlp_builder_utils"
+      )
+    endif()
 
     opentelemetry_add_pkgconfig(
       exporter_otlp_json_http_metric
@@ -1116,12 +1125,14 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "opentelemetry_exporter_otlp_http_options opentelemetry_exporter_otlp_json_http_client opentelemetry_exporter_otlp_json_mapping"
     )
 
-    opentelemetry_add_pkgconfig(
-      exporter_otlp_json_http_metric_builder
-      "OpenTelemetry OTLP - JSON HTTP Metric Builder"
-      "Builder for the protobuf-free OTLP/JSON HTTP metric exporter."
-      "opentelemetry_exporter_otlp_json_http_metric opentelemetry_exporter_otlp_builder_utils"
-    )
+    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+      opentelemetry_add_pkgconfig(
+        exporter_otlp_json_http_metric_builder
+        "OpenTelemetry OTLP - JSON HTTP Metric Builder"
+        "Builder for the protobuf-free OTLP/JSON HTTP metric exporter."
+        "opentelemetry_exporter_otlp_json_http_metric opentelemetry_exporter_otlp_builder_utils"
+      )
+    endif()
   endif()
 
 endif()

@@ -31,16 +31,29 @@ target_link_libraries(
           opentelemetry-cpp::ostream_metrics_exporter_builder
           opentelemetry-cpp::ostream_log_record_exporter_builder)
 
+# The two OTLP/HTTP builder families are built under separate options -- protobuf under
+# OTELCPP_WITH_OTLP_HTTP_PROTOBUF, OTLP/JSON only with a writer backend to hand the
+# exporter -- so the example takes whichever of them this build has.
 if(OTELCPP_WITH_OTLP_HTTP)
   target_compile_definitions(example_yaml PRIVATE OTEL_HAVE_OTLP_HTTP)
-  target_link_libraries(
-    example_yaml
-    PRIVATE opentelemetry-cpp::otlp_http_exporter_builder
-            opentelemetry-cpp::otlp_http_log_record_exporter_builder
-            opentelemetry-cpp::otlp_http_metric_exporter_builder
-            opentelemetry-cpp::otlp_json_http_exporter_builder
-            opentelemetry-cpp::otlp_json_http_log_record_exporter_builder
-            opentelemetry-cpp::otlp_json_http_metric_exporter_builder)
+
+  if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
+    target_compile_definitions(example_yaml PRIVATE OTEL_HAVE_OTLP_HTTP_PROTOBUF_BUILDERS)
+    target_link_libraries(
+      example_yaml
+      PRIVATE opentelemetry-cpp::otlp_http_exporter_builder
+              opentelemetry-cpp::otlp_http_log_record_exporter_builder
+              opentelemetry-cpp::otlp_http_metric_exporter_builder)
+  endif()
+
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    target_compile_definitions(example_yaml PRIVATE OTEL_HAVE_OTLP_HTTP_JSON_BUILDERS)
+    target_link_libraries(
+      example_yaml
+      PRIVATE opentelemetry-cpp::otlp_json_http_exporter_builder
+              opentelemetry-cpp::otlp_json_http_log_record_exporter_builder
+              opentelemetry-cpp::otlp_json_http_metric_exporter_builder)
+  endif()
 endif()
 
 if(OTELCPP_WITH_OTLP_GRPC)

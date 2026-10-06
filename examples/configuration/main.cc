@@ -38,10 +38,13 @@
 #  include "metrics_foo_library/foo_library.h"
 #endif
 
-#ifdef OTEL_HAVE_OTLP_HTTP
+#ifdef OTEL_HAVE_OTLP_HTTP_PROTOBUF_BUILDERS
 #  include "opentelemetry/exporters/otlp/otlp_http_log_record_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_http_push_metric_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_http_span_builder.h"
+#endif
+
+#ifdef OTEL_HAVE_OTLP_HTTP_JSON_BUILDERS
 #  include "opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h"
 #  include "opentelemetry/exporters/otlp/otlp_json_http_span_builder.h"
@@ -216,27 +219,30 @@ ReturnCode InitOtel(const std::string &config_file)
     opentelemetry::exporter::metrics::ConsolePushMetricBuilder::Register(registry.get());
     opentelemetry::exporter::logs::ConsoleLogRecordBuilder::Register(registry.get());
 
-#ifdef OTEL_HAVE_OTLP_HTTP
     /*
      * The protobuf-free OTLP/JSON exporters fill the same registry slots as
      * the protobuf ones, so an application registers one set or the other.
      * opt_json_builders picks between them here only so that both can be
      * covered by functional tests; an application just registers the set it
-     * wants.
+     * wants. Each family is built under its own option, so a build may carry
+     * either, both or neither.
      */
     if (opt_json_builders)
     {
+#ifdef OTEL_HAVE_OTLP_HTTP_JSON_BUILDERS
       opentelemetry::exporter::otlp::OtlpJsonHttpSpanBuilder::Register(registry.get());
       opentelemetry::exporter::otlp::OtlpJsonHttpPushMetricBuilder::Register(registry.get());
       opentelemetry::exporter::otlp::OtlpJsonHttpLogRecordBuilder::Register(registry.get());
+#endif
     }
     else
     {
+#ifdef OTEL_HAVE_OTLP_HTTP_PROTOBUF_BUILDERS
       opentelemetry::exporter::otlp::OtlpHttpSpanBuilder::Register(registry.get());
       opentelemetry::exporter::otlp::OtlpHttpPushMetricBuilder::Register(registry.get());
       opentelemetry::exporter::otlp::OtlpHttpLogRecordBuilder::Register(registry.get());
-    }
 #endif
+    }
 
 #ifdef OTEL_HAVE_OTLP_GRPC
     opentelemetry::exporter::otlp::OtlpGrpcSpanBuilder::Register(registry.get());
