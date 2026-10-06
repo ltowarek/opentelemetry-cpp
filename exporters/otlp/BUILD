@@ -613,6 +613,10 @@ cc_library(
         "otlp",
         "otlp_http",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_builder_utils",
         ":otlp_json_http_exporter",
@@ -633,6 +637,10 @@ cc_library(
         "otlp",
         "otlp_http",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_builder_utils",
         ":otlp_json_http_metric_exporter",
@@ -653,6 +661,10 @@ cc_library(
         "otlp",
         "otlp_http_log",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_builder_utils",
         ":otlp_json_http_log_record_exporter",
@@ -1117,6 +1129,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_reader",
         "@com_google_googletest//:gtest_main",
@@ -1130,6 +1146,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_partial_success",
         "//test_common:headers",
@@ -1144,6 +1164,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_log_record_exporter_builder",
         ":otlp_json_http_metric_exporter_builder",
@@ -1160,6 +1184,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_exporter",
         "@com_google_googletest//:gtest_main",
@@ -1173,6 +1201,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_exporter",
         "//test_common/src/http/client/nosend:http_client_nosend",
@@ -1187,6 +1219,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_log_record_exporter",
         "@com_google_googletest//:gtest_main",
@@ -1200,6 +1236,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_log_record_exporter",
         "//test_common/src/http/client/nosend:http_client_nosend",
@@ -1214,6 +1254,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_metric_exporter",
         "@com_google_googletest//:gtest_main",
@@ -1227,6 +1271,10 @@ cc_test(
         "otlp",
         "test",
     ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":otlp_json_http_metric_exporter",
         "//test_common/src/http/client/nosend:http_client_nosend",
