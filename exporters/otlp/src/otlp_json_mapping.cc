@@ -38,6 +38,17 @@ char HexDigit(std::uint8_t nibble) noexcept
   return nibble >= 10 ? static_cast<char>(nibble - 10 + 'a') : static_cast<char>(nibble + '0');
 }
 
+// Formats right-aligned into the end of buffer and returns the first digit.
+char *FormatDecimal(char *end, std::uint64_t value) noexcept
+{
+  do
+  {
+    *--end = static_cast<char>('0' + value % 10);
+    value /= 10;
+  } while (value != 0);
+  return end;
+}
+
 // Per the OpenTelemetry spec a uint64 above INT64_MAX is a decimal string
 // rather than a value wrapped into a negative int64, and below that it takes
 // the same int_value encoding as any other integer.
@@ -53,7 +64,7 @@ void WriteUInt64AnyValue(JsonWriter &writer, std::uint64_t value) noexcept
   else
   {
     writer.Key("stringValue");
-    writer.WriteString(std::to_string(value));
+    WriteUInt64String(writer, value);
   }
   writer.EndObject();
 }
@@ -132,20 +143,17 @@ struct OwnedAttributeValueVisitor
 
   void operator()(std::int32_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue",
-                        [&] { writer.WriteString(std::to_string(value)); });
+    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
   }
 
   void operator()(std::uint32_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue",
-                        [&] { writer.WriteString(std::to_string(value)); });
+    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
   }
 
   void operator()(std::int64_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue",
-                        [&] { writer.WriteString(std::to_string(value)); });
+    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
   }
 
   void operator()(std::uint64_t value) const noexcept { WriteUInt64AnyValue(writer, value); }
@@ -155,10 +163,7 @@ struct OwnedAttributeValueVisitor
     WriteScalarAnyValue(writer, "doubleValue", [&] { writer.WriteDouble(value); });
   }
 
-  void operator()(const std::string &value) const noexcept
-  {
-    WriteStringAnyValue(writer, value);
-  }
+  void operator()(const std::string &value) const noexcept { WriteStringAnyValue(writer, value); }
 
   void operator()(const std::vector<bool> &values) const noexcept
   {
@@ -170,21 +175,21 @@ struct OwnedAttributeValueVisitor
   void operator()(const std::vector<std::int32_t> &values) const noexcept
   {
     WriteArrayAnyValue(writer, values, [&](std::int32_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { writer.WriteString(std::to_string(value)); });
+      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
     });
   }
 
   void operator()(const std::vector<std::uint32_t> &values) const noexcept
   {
     WriteArrayAnyValue(writer, values, [&](std::uint32_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { writer.WriteString(std::to_string(value)); });
+      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
     });
   }
 
   void operator()(const std::vector<std::int64_t> &values) const noexcept
   {
     WriteArrayAnyValue(writer, values, [&](std::int64_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { writer.WriteString(std::to_string(value)); });
+      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
     });
   }
 
@@ -217,21 +222,58 @@ struct OwnedAttributeValueVisitor
 
 }  // namespace
 
+// Hex-encodes into a stack buffer when the value fits, so a trace or span ID
+// does not allocate a temporary string before the writer copies it. A trace ID
+// is 16 bytes and a span ID 8, so the buffer covers every ID OTLP carries.
 void WriteHexId(JsonWriter &writer, const std::uint8_t *data, std::size_t size) noexcept
 {
-  std::string hex;
-  hex.reserve(size * 2);
+  static constexpr std::size_t kStackBytes = 32;
+  if (size > kStackBytes)
+  {
+    std::string hex;
+    hex.reserve(size * 2);
+    for (std::size_t i = 0; i < size; ++i)
+    {
+      hex.push_back(HexDigit(static_cast<std::uint8_t>(data[i] >> 4)));
+      hex.push_back(HexDigit(static_cast<std::uint8_t>(data[i] & 0x0f)));
+    }
+    writer.WriteString(hex);
+    return;
+  }
+
+  char buffer[kStackBytes * 2];
   for (std::size_t i = 0; i < size; ++i)
   {
-    hex.push_back(HexDigit(static_cast<std::uint8_t>(data[i] >> 4)));
-    hex.push_back(HexDigit(static_cast<std::uint8_t>(data[i] & 0x0f)));
+    buffer[2 * i]     = HexDigit(static_cast<std::uint8_t>(data[i] >> 4));
+    buffer[2 * i + 1] = HexDigit(static_cast<std::uint8_t>(data[i] & 0x0f));
   }
-  writer.WriteString(hex);
+  writer.WriteString(nostd::string_view(buffer, size * 2));
 }
 
+// 64-bit values and nanosecond timestamps are JSON strings in OTLP/JSON, and
+// every span carries several. Formatting into a stack buffer avoids the
+// temporary std::string that the writer would only copy again.
 void WriteUInt64String(JsonWriter &writer, std::uint64_t value) noexcept
 {
-  writer.WriteString(std::to_string(value));
+  char buffer[20];
+  char *end   = buffer + sizeof(buffer);
+  char *begin = FormatDecimal(end, value);
+  writer.WriteString(nostd::string_view(begin, static_cast<std::size_t>(end - begin)));
+}
+
+void WriteInt64String(JsonWriter &writer, std::int64_t value) noexcept
+{
+  char buffer[21];
+  char *end = buffer + sizeof(buffer);
+  // Negate as unsigned so INT64_MIN does not overflow.
+  std::uint64_t magnitude =
+      value < 0 ? 0 - static_cast<std::uint64_t>(value) : static_cast<std::uint64_t>(value);
+  char *begin = FormatDecimal(end, magnitude);
+  if (value < 0)
+  {
+    *--begin = '-';
+  }
+  writer.WriteString(nostd::string_view(begin, static_cast<std::size_t>(end - begin)));
 }
 
 void WriteAnyValue(JsonWriter &writer,

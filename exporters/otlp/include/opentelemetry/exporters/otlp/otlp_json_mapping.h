@@ -65,6 +65,9 @@ void WriteHexId(JsonWriter &writer, const std::uint8_t *data, std::size_t size) 
 /** Writes a 64-bit value as a decimal string, as OTLP/JSON requires. */
 void WriteUInt64String(JsonWriter &writer, std::uint64_t value) noexcept;
 
+/** Writes a signed 64-bit value as a decimal string, as OTLP/JSON requires. */
+void WriteInt64String(JsonWriter &writer, std::int64_t value) noexcept;
+
 /**
  * Writes an AnyValue object for `value`.
  *

@@ -117,7 +117,7 @@ void WriteNumberDataPoint(JsonWriter &writer,
   if (nostd::holds_alternative<std::int64_t>(value))
   {
     writer.Key("asInt");
-    writer.WriteString(std::to_string(nostd::get<std::int64_t>(value)));
+    json_mapping::WriteInt64String(writer, nostd::get<std::int64_t>(value));
   }
   else
   {
