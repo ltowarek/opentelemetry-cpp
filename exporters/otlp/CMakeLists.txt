@@ -2116,6 +2116,26 @@ if(OTELCPP_BUILD_TESTING
             ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
+# Compares the two OTLP/JSON trace paths, so it needs a writer backend to produce bytes
+# with and the protobuf path to compare against.
+if(OTELCPP_BUILD_TESTING
+   AND OTELCPP_WITH_BENCHMARK
+   AND OTELCPP_WITH_JSON_WRITER_NLOHMANN
+   AND OTELCPP_OTLP_PROTOBUF_REQUIRED)
+  add_executable(otlp_json_trace_mapping_benchmark
+                 benchmark/otlp_json_trace_mapping_benchmark.cc)
+
+  target_link_libraries(
+    otlp_json_trace_mapping_benchmark
+    PRIVATE opentelemetry_exporter_otlp_json_mapping
+            opentelemetry_exporter_otlp_json_converter
+            opentelemetry_otlp_recordable
+            opentelemetry_exporter_otlp_json_writer
+            benchmark::benchmark
+            protobuf::libprotobuf
+            ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
 if(OTELCPP_BUILD_TESTING
    AND OTELCPP_WITH_BENCHMARK
    AND OTELCPP_WITH_OTLP_FILE

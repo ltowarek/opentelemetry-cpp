@@ -1824,6 +1824,29 @@ otel_cc_benchmark(
 )
 
 otel_cc_benchmark(
+    name = "otlp_json_trace_mapping_benchmark",
+    srcs = ["benchmark/otlp_json_trace_mapping_benchmark.cc"],
+    tags = [
+        "benchmark",
+        "otlp",
+        "otlp_http",
+        "test",
+    ],
+    target_compatible_with = select({
+        ":json_writer_nlohmann_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":otlp_json_converter",
+        ":otlp_json_mapping",
+        ":otlp_json_writer",
+        ":otlp_recordable",
+        "//sdk/src/common:global_log_handler",
+        "@com_github_opentelemetry_proto//:trace_service_proto_cc",
+    ],
+)
+
+otel_cc_benchmark(
     name = "otlp_file_client_json_benchmark",
     srcs = ["benchmark/otlp_file_client_json_benchmark.cc"],
     tags = [
