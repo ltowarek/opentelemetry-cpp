@@ -27,7 +27,8 @@ done
 # OTLP exporters
 validate_package "opentelemetry_otlp_recordable"
 validate_package "opentelemetry_exporter_otlp_builder_utils"
-for variant in json_writer json_writer_nlohmann json_converter; do
+for variant in json_writer json_writer_nlohmann json_converter json_reader \
+  json_reader_nlohmann json_mapping json_partial_success; do
   validate_package "opentelemetry_exporter_otlp_${variant}"
 done
 
@@ -43,6 +44,18 @@ for protocol in http file; do
   for variant in client builder log log_builder metric metric_builder; do
     validate_package "opentelemetry_exporter_otlp_${protocol}_${variant}"
   done
+done
+
+# Shared by both OTLP/HTTP families
+for variant in http_options http_transport; do
+  validate_package "opentelemetry_exporter_otlp_${variant}"
+done
+
+# Protobuf-free OTLP/JSON over HTTP. The builder packages ship only with a JSON writer
+# backend compiled in, which is what validate_package's existence check allows for.
+validate_package "opentelemetry_exporter_otlp_json_http_client"
+for variant in "" _builder _log _log_builder _metric _metric_builder; do
+  validate_package "opentelemetry_exporter_otlp_json_http${variant}"
 done
 
 # Other exporters

@@ -238,10 +238,16 @@ if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
 endif()
 
 if(OTELCPP_INSTALL)
+  set(OPENTELEMETRY_OTLP_JSON_READER_PC_REQUIRES "opentelemetry_common")
+  if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+    string(APPEND OPENTELEMETRY_OTLP_JSON_READER_PC_REQUIRES
+           " opentelemetry_exporter_otlp_json_reader_nlohmann")
+  endif()
+
   opentelemetry_add_pkgconfig(
     exporter_otlp_json_reader "OpenTelemetry OTLP - JSON Reader"
     "Document-shaped JSON reader interface, with an nlohmann-backed default implementation."
-    "opentelemetry_common")
+    "${OPENTELEMETRY_OTLP_JSON_READER_PC_REQUIRES}")
 
   if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
     opentelemetry_add_pkgconfig(
@@ -1078,6 +1084,20 @@ if(OTELCPP_WITH_OTLP_HTTP)
         "opentelemetry_exporter_otlp_http_metric opentelemetry_exporter_otlp_builder_utils opentelemetry_configuration_core"
       )
     endif()
+
+    # Both of these are required by the packages below, so they need packages of their own
+    # for pkg-config to resolve the chain at all.
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_http_options
+      "OpenTelemetry OTLP - HTTP Exporter Options"
+      "The OTLP/HTTP exporter option structs, shared by the protobuf and OTLP/JSON exporters."
+      "opentelemetry_otlp_common opentelemetry_common")
+
+    opentelemetry_add_pkgconfig(
+      exporter_otlp_http_transport
+      "OpenTelemetry OTLP - HTTP Transport"
+      "The protobuf-free OTLP/HTTP send path."
+      "opentelemetry_api opentelemetry_exporter_otlp_http_options")
 
     opentelemetry_add_pkgconfig(
       exporter_otlp_json_http_client
