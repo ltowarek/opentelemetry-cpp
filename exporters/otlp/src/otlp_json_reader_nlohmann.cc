@@ -145,11 +145,16 @@ private:
     {
       return nullptr;
     }
-    const auto it = stack_.back()->find(std::string(key.data(), key.size()));
+    // assign() reuses whatever capacity the buffer already has, so a lookup does not
+    // construct a string for the key the way PR-sized field names otherwise would.
+    lookup_key_.assign(key.data(), key.size());
+    const auto it = stack_.back()->find(lookup_key_);
     return it == stack_.back()->end() ? nullptr : &(*it);
   }
 
   nlohmann::json root_{nlohmann::json::value_t::discarded};
+  // Scratch for Find(), so a key lookup reuses one buffer.
+  std::string lookup_key_;
   // Ancestors of the current object, innermost last. Empty until Parse()
   // succeeds; the root is never popped.
   std::vector<const nlohmann::json *> stack_;
