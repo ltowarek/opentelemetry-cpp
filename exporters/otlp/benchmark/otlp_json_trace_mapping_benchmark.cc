@@ -12,11 +12,14 @@
 
 #include <benchmark/benchmark.h>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "opentelemetry/common/timestamp.h"
 
 #include "opentelemetry/exporters/otlp/detail/default_json_writer_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_json_converter.h"

@@ -274,6 +274,32 @@ TEST(OtlpJsonHttpExporterTest, ExportFailsWhenTheReaderFactoryReturnsNull)
 }
 #endif
 
+TEST(OtlpJsonHttpExporterTest, FallsBackToTheDefaultBackendForNullFactories)
+{
+  auto client         = test_common::ext::http::client::nosend::HttpClientFactoryNosend().Create();
+  auto no_send_client = std::static_pointer_cast<http_client::nosend::HttpClient>(client);
+  // Passing null where a factory is expected means the default, not a null to dereference.
+  OtlpJsonHttpExporter exporter(MakeOptions(), OtlpHttpExporterRuntimeOptions(), client, nullptr,
+                                nullptr);
+
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+  std::string sent;
+  EXPECT_CALL(*mock_session, SendRequest)
+      .WillOnce([&](const std::shared_ptr<http_client::EventHandler> &handler) {
+        const auto &request = *mock_session->GetRequest();
+        sent.assign(request.body_.begin(), request.body_.end());
+        http_client::nosend::Response response;
+        response.status_code_ = http_client::nosend::Http_Ok;
+        response.Finish(*handler);
+      });
+
+  auto batch = MakeBatch(exporter);
+  nostd::span<std::unique_ptr<sdk_trace::Recordable>> spans(batch.data(), batch.size());
+  EXPECT_EQ(sdk::common::ExportResult::kSuccess, exporter.Export(spans));
+  EXPECT_EQ(ExpectedBody(spans), sent);
+}
+
 }  // namespace
 }  // namespace otlp
 }  // namespace exporter
