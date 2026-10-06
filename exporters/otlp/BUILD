@@ -1114,7 +1114,11 @@ cc_test(
 
 cc_test(
     name = "otlp_json_reader_test",
-    srcs = ["test/otlp_json_reader_test.cc"],
+    srcs = [
+        "test/otlp_json_reader_contract_test.cc",
+        "test/otlp_json_reader_contract_test.h",
+        "test/otlp_json_reader_test.cc",
+    ],
     tags = [
         "otlp",
         "test",

@@ -1570,7 +1570,9 @@ if(OTELCPP_BUILD_TESTING)
       TEST_PREFIX exporter.otlp.
       TEST_LIST otlp_json_writer_nlohmann_test)
 
-    add_executable(otlp_json_reader_test test/otlp_json_reader_test.cc)
+    add_executable(
+      otlp_json_reader_test test/otlp_json_reader_test.cc
+                            test/otlp_json_reader_contract_test.cc)
     target_link_libraries(
       otlp_json_reader_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
       opentelemetry_exporter_otlp_json_reader)
