@@ -35,6 +35,28 @@ namespace exporter
 namespace otlp
 {
 
+namespace
+{
+
+// The runtime options are where a consumer supplies a backend, the way
+// OtlpHttpClient already takes one, so an exporter built without explicit
+// factories has to look there before falling back to the compiled-in default.
+std::shared_ptr<JsonWriterFactory> ResolveJsonWriterFactory(
+    const OtlpHttpMetricExporterRuntimeOptions &runtime_options) noexcept
+{
+  return runtime_options.json_writer_factory ? runtime_options.json_writer_factory
+                                             : detail::GetDefaultJsonWriterFactory();
+}
+
+std::shared_ptr<JsonReaderFactory> ResolveJsonReaderFactory(
+    const OtlpHttpMetricExporterRuntimeOptions &runtime_options) noexcept
+{
+  return runtime_options.json_reader_factory ? runtime_options.json_reader_factory
+                                             : detail::GetDefaultJsonReaderFactory();
+}
+
+}  // namespace
+
 OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter()
     : OtlpJsonHttpMetricExporter(OtlpHttpMetricExporterOptions())
 {}
@@ -59,8 +81,8 @@ OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
     : OtlpJsonHttpMetricExporter(options,
                                  runtime_options,
                                  std::move(http_client),
-                                 detail::GetDefaultJsonWriterFactory(),
-                                 detail::GetDefaultJsonReaderFactory())
+                                 ResolveJsonWriterFactory(runtime_options),
+                                 ResolveJsonReaderFactory(runtime_options))
 {}
 
 OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
@@ -107,7 +129,17 @@ opentelemetry::sdk::common::ExportResult OtlpJsonHttpMetricExporter::Export(
   }
 
   auto json_writer = json_writer_factory_->Create();
+  if (!json_writer)
+  {
+    OTEL_INTERNAL_LOG_ERROR(
+        "[OTLP METRIC HTTP Exporter] ERROR: JsonWriterFactory::Create() returned nullptr");
+    return opentelemetry::sdk::common::ExportResult::kFailure;
+  }
+
   ConvertMetricsToJson(*json_writer, data);
+
+  // ToString() can fail on its own, so the body is only usable once ok() holds after it.
+  std::string body_json = json_writer->ok() ? json_writer->ToString() : std::string();
   if (!json_writer->ok())
   {
     OTEL_INTERNAL_LOG_ERROR("[OTLP METRIC HTTP Exporter] ERROR: Failed to serialize the request");
@@ -115,7 +147,7 @@ opentelemetry::sdk::common::ExportResult OtlpJsonHttpMetricExporter::Export(
   }
 
   return detail::SendOtlpJsonRequest(
-      *transport_, json_reader_factory_, OtlpMetricPartialSuccessSignal(), json_writer->ToString(),
+      *transport_, json_reader_factory_, OtlpMetricPartialSuccessSignal(), body_json,
       data.scope_metric_data_.size(), detail::MaxRunningRequests(options_));
 }
 

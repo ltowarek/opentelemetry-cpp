@@ -41,6 +41,7 @@
 #include "opentelemetry/test_common/ext/http/client/nosend/http_client_factory_nosend.h"
 #include "opentelemetry/test_common/ext/http/client/nosend/http_client_nosend.h"
 #include "opentelemetry/version.h"
+#include "otlp_stub_json_writer.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter
@@ -159,6 +160,23 @@ ExportOutcome ExportOneCollection(
   return outcome;
 }
 
+// For the cases that must fail before anything is posted: no request is expected, so a one-call
+// expectation would itself be the failure.
+sdk::common::ExportResult ExportExpectingNoRequest(
+    const OtlpHttpMetricExporterRuntimeOptions &runtime_options)
+{
+  auto client         = test_common::ext::http::client::nosend::HttpClientFactoryNosend().Create();
+  auto no_send_client = std::static_pointer_cast<http_client::nosend::HttpClient>(client);
+  OtlpJsonHttpMetricExporter exporter(MakeOptions(), runtime_options, client);
+
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+  EXPECT_CALL(*mock_session, SendRequest).Times(0);
+
+  auto data = MakeResourceMetrics();
+  return exporter.Export(data);
+}
+
 TEST(OtlpJsonHttpMetricExporterTest, PostsTheMappedMetricsAsJson)
 {
   std::string expected_body;
@@ -231,6 +249,68 @@ TEST(OtlpJsonHttpMetricExporterTest, ReportsTheConfiguredAggregationTemporality)
   EXPECT_EQ(metric_sdk::AggregationTemporality::kCumulative,
             exporter.GetAggregationTemporality(metric_sdk::InstrumentType::kUpDownCounter));
 }
+
+TEST(OtlpJsonHttpMetricExporterTest, UsesTheWriterFactoryFromTheRuntimeOptions)
+{
+  OtlpHttpMetricExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory = std::make_shared<test::StubJsonWriterFactory>([] {
+    auto writer          = std::make_unique<test::StubJsonWriter>();
+    writer->on_to_string = [] { return std::string(R"({"from":"the runtime options"})"); };
+    return writer;
+  });
+
+  auto client         = test_common::ext::http::client::nosend::HttpClientFactoryNosend().Create();
+  auto no_send_client = std::static_pointer_cast<http_client::nosend::HttpClient>(client);
+  OtlpJsonHttpMetricExporter exporter(MakeOptions(), runtime_options, client);
+
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+  std::string sent;
+  EXPECT_CALL(*mock_session, SendRequest)
+      .WillOnce([&](const std::shared_ptr<http_client::EventHandler> &handler) {
+        const auto &request = *mock_session->GetRequest();
+        sent.assign(request.body_.begin(), request.body_.end());
+        http_client::nosend::Response response;
+        response.status_code_ = http_client::nosend::Http_Ok;
+        response.Finish(*handler);
+      });
+
+  auto data = MakeResourceMetrics();
+  exporter.Export(data);
+
+  EXPECT_EQ(R"({"from":"the runtime options"})", sent);
+}
+
+// An asynchronous export reports success as soon as the request is under way and carries the
+// final result to the callback instead, so only a synchronous one has a result to assert on.
+#ifndef ENABLE_ASYNC_EXPORT
+TEST(OtlpJsonHttpMetricExporterTest, ExportFailsWhenTheWriterFailsInToString)
+{
+  OtlpHttpMetricExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory = std::make_shared<test::StubJsonWriterFactory>([] {
+    auto writer = std::make_unique<test::StubJsonWriter>();
+    // Everything written succeeded; only turning the document into bytes failed.
+    auto failed          = std::make_shared<bool>(false);
+    writer->on_to_string = [failed] {
+      *failed = true;
+      return std::string();
+    };
+    writer->on_ok = [failed] { return !*failed; };
+    return writer;
+  });
+
+  EXPECT_EQ(sdk::common::ExportResult::kFailure, ExportExpectingNoRequest(runtime_options));
+}
+
+TEST(OtlpJsonHttpMetricExporterTest, ExportFailsWhenTheWriterFactoryReturnsNull)
+{
+  OtlpHttpMetricExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory =
+      std::make_shared<test::StubJsonWriterFactory>([] { return nullptr; });
+
+  EXPECT_EQ(sdk::common::ExportResult::kFailure, ExportExpectingNoRequest(runtime_options));
+}
+#endif
 
 }  // namespace
 }  // namespace otlp

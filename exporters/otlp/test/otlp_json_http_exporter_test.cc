@@ -34,6 +34,8 @@
 #include "opentelemetry/test_common/ext/http/client/nosend/http_client_factory_nosend.h"
 #include "opentelemetry/test_common/ext/http/client/nosend/http_client_nosend.h"
 #include "opentelemetry/version.h"
+#include "otlp_stub_json_reader.h"
+#include "otlp_stub_json_writer.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace exporter
@@ -80,15 +82,17 @@ std::string ExpectedBody(const nostd::span<std::unique_ptr<sdk_trace::Recordable
   return writer->ToString();
 }
 
-ExportOutcome ExportOneBatch(const std::string &response_text,
-                             http_client::StatusCode status_code = http_client::nosend::Http_Ok,
-                             std::string *expected_body          = nullptr)
+ExportOutcome ExportOneBatch(
+    const std::string &response_text,
+    http_client::StatusCode status_code                   = http_client::nosend::Http_Ok,
+    std::string *expected_body                            = nullptr,
+    const OtlpHttpExporterRuntimeOptions &runtime_options = OtlpHttpExporterRuntimeOptions())
 {
   ExportOutcome outcome;
 
   auto client         = test_common::ext::http::client::nosend::HttpClientFactoryNosend().Create();
   auto no_send_client = std::static_pointer_cast<http_client::nosend::HttpClient>(client);
-  OtlpJsonHttpExporter exporter(MakeOptions(), OtlpHttpExporterRuntimeOptions(), client);
+  OtlpJsonHttpExporter exporter(MakeOptions(), runtime_options, client);
 
   auto mock_session =
       std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
@@ -117,6 +121,24 @@ ExportOutcome ExportOneBatch(const std::string &response_text,
   outcome.result = exporter.Export(spans);
 
   return outcome;
+}
+
+// For the cases that must fail before anything is posted: no request is expected, so the shared
+// harness's one-call expectation would itself be the failure.
+sdk::common::ExportResult ExportExpectingNoRequest(
+    const OtlpHttpExporterRuntimeOptions &runtime_options)
+{
+  auto client         = test_common::ext::http::client::nosend::HttpClientFactoryNosend().Create();
+  auto no_send_client = std::static_pointer_cast<http_client::nosend::HttpClient>(client);
+  OtlpJsonHttpExporter exporter(MakeOptions(), runtime_options, client);
+
+  auto mock_session =
+      std::static_pointer_cast<http_client::nosend::Session>(no_send_client->session_);
+  EXPECT_CALL(*mock_session, SendRequest).Times(0);
+
+  auto batch = MakeBatch(exporter);
+  nostd::span<std::unique_ptr<sdk_trace::Recordable>> spans(batch.data(), batch.size());
+  return exporter.Export(spans);
 }
 
 TEST(OtlpJsonHttpExporterTest, PostsTheMappedSpansAsJson)
@@ -175,6 +197,82 @@ TEST(OtlpJsonHttpExporterTest, ReportsFailureAfterShutdown)
   nostd::span<std::unique_ptr<sdk_trace::Recordable>> spans(batch.data(), batch.size());
   EXPECT_EQ(sdk::common::ExportResult::kFailure, exporter.Export(spans));
 }
+
+TEST(OtlpJsonHttpExporterTest, UsesTheWriterFactoryFromTheRuntimeOptions)
+{
+  OtlpHttpExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory = std::make_shared<test::StubJsonWriterFactory>([] {
+    auto writer          = std::make_unique<test::StubJsonWriter>();
+    writer->on_to_string = [] { return std::string(R"({"from":"the runtime options"})"); };
+    return writer;
+  });
+
+  const auto outcome = ExportOneBatch("", http_client::nosend::Http_Ok, nullptr, runtime_options);
+
+  EXPECT_EQ(R"({"from":"the runtime options"})", outcome.request_body);
+}
+
+TEST(OtlpJsonHttpExporterTest, UsesTheReaderFactoryFromTheRuntimeOptions)
+{
+  auto reads = std::make_shared<int>(0);
+  OtlpHttpExporterRuntimeOptions runtime_options;
+  runtime_options.json_reader_factory = std::make_shared<test::StubJsonReaderFactory>([reads] {
+    auto reader      = std::make_unique<test::StubJsonReader>();
+    reader->on_parse = [reads](nostd::string_view) {
+      ++*reads;
+      return true;
+    };
+    return reader;
+  });
+
+  ExportOneBatch(R"({"partialSuccess":{}})", http_client::nosend::Http_Ok, nullptr,
+                 runtime_options);
+
+  EXPECT_EQ(1, *reads);
+}
+
+// An asynchronous export reports success as soon as the request is under way and carries the
+// final result to the callback instead, so only a synchronous one has a result to assert on.
+#ifndef ENABLE_ASYNC_EXPORT
+TEST(OtlpJsonHttpExporterTest, ExportFailsWhenTheWriterFailsInToString)
+{
+  OtlpHttpExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory = std::make_shared<test::StubJsonWriterFactory>([] {
+    auto writer = std::make_unique<test::StubJsonWriter>();
+    // Everything written succeeded; only turning the document into bytes failed.
+    auto failed          = std::make_shared<bool>(false);
+    writer->on_to_string = [failed] {
+      *failed = true;
+      return std::string();
+    };
+    writer->on_ok = [failed] { return !*failed; };
+    return writer;
+  });
+
+  EXPECT_EQ(sdk::common::ExportResult::kFailure, ExportExpectingNoRequest(runtime_options));
+}
+
+TEST(OtlpJsonHttpExporterTest, ExportFailsWhenTheWriterFactoryReturnsNull)
+{
+  OtlpHttpExporterRuntimeOptions runtime_options;
+  runtime_options.json_writer_factory =
+      std::make_shared<test::StubJsonWriterFactory>([] { return nullptr; });
+
+  EXPECT_EQ(sdk::common::ExportResult::kFailure, ExportExpectingNoRequest(runtime_options));
+}
+
+TEST(OtlpJsonHttpExporterTest, ExportFailsWhenTheReaderFactoryReturnsNull)
+{
+  OtlpHttpExporterRuntimeOptions runtime_options;
+  runtime_options.json_reader_factory =
+      std::make_shared<test::StubJsonReaderFactory>([] { return nullptr; });
+
+  // The request landed, but a response body that cannot be read leaves the export unconfirmed.
+  const auto outcome = ExportOneBatch("", http_client::nosend::Http_Ok, nullptr, runtime_options);
+
+  EXPECT_EQ(sdk::common::ExportResult::kFailure, outcome.result);
+}
+#endif
 
 }  // namespace
 }  // namespace otlp
