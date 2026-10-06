@@ -60,13 +60,23 @@ sdk::common::ExportResult SendOtlpJsonRequest(
     else
     {
       auto reader = reader_factory->Create();
-      const nostd::string_view body_view(reinterpret_cast<const char *>(response_body.data()),
-                                         response_body.size());
       // An unreadable body means the export cannot be reported as having landed, which is
-      // what the protobuf response path does with a body it fails to parse.
-      if (!LogOtlpJsonPartialSuccess(*reader, body_view, signal, exported_count))
+      // what the protobuf response path does with a body it fails to parse. A factory that
+      // hands back nothing leaves the body just as unread.
+      if (!reader)
       {
+        OTEL_INTERNAL_LOG_ERROR(signal.log_prefix
+                                << " ERROR: JsonReaderFactory::Create() returned nullptr");
         result = sdk::common::ExportResult::kFailure;
+      }
+      else
+      {
+        const nostd::string_view body_view(reinterpret_cast<const char *>(response_body.data()),
+                                           response_body.size());
+        if (!LogOtlpJsonPartialSuccess(*reader, body_view, signal, exported_count))
+        {
+          result = sdk::common::ExportResult::kFailure;
+        }
       }
     }
 

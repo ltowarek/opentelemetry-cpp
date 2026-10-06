@@ -5,6 +5,7 @@
 
 #include <memory>
 
+#include "opentelemetry/exporters/otlp/otlp_json_reader_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_json_writer_factory.h"
 #include "opentelemetry/sdk/common/thread_instrumentation.h"
 #include "opentelemetry/version.h"
@@ -26,6 +27,10 @@ struct OPENTELEMETRY_EXPORT OtlpHttpMetricExporterRuntimeOptions
       std::shared_ptr<sdk::common::ThreadInstrumentation>(nullptr);
 
   std::shared_ptr<JsonWriterFactory> json_writer_factory;
+
+  // Only the OTLP/JSON exporters read a JSON response body; the protobuf ones parse the
+  // response as protobuf and ignore this.
+  std::shared_ptr<JsonReaderFactory> json_reader_factory;
 };
 
 }  // namespace otlp
