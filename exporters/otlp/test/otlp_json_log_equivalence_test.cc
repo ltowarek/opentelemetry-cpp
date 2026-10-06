@@ -54,28 +54,25 @@ namespace otlp
 namespace
 {
 
-namespace logs_api = opentelemetry::logs;
-namespace sdk_logs = opentelemetry::sdk::logs;
+namespace logs_api  = opentelemetry::logs;
+namespace sdk_logs  = opentelemetry::sdk::logs;
 namespace trace_api = opentelemetry::trace;
 
 constexpr std::uint8_t kTraceIdBytes[trace_api::TraceId::kSize] = {
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-    0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
 constexpr std::uint8_t kSpanIdBytes[trace_api::SpanId::kSize] = {0x11, 0x12, 0x13, 0x14,
-                                                                0x15, 0x16, 0x17, 0x18};
+                                                                 0x15, 0x16, 0x17, 0x18};
 
 trace_api::TraceId MakeTraceId()
 {
-  return trace_api::TraceId(
-      nostd::span<const std::uint8_t, trace_api::TraceId::kSize>(kTraceIdBytes,
-                                                                 trace_api::TraceId::kSize));
+  return trace_api::TraceId(nostd::span<const std::uint8_t, trace_api::TraceId::kSize>(
+      kTraceIdBytes, trace_api::TraceId::kSize));
 }
 
 trace_api::SpanId MakeSpanId()
 {
-  return trace_api::SpanId(
-      nostd::span<const std::uint8_t, trace_api::SpanId::kSize>(kSpanIdBytes,
-                                                                trace_api::SpanId::kSize));
+  return trace_api::SpanId(nostd::span<const std::uint8_t, trace_api::SpanId::kSize>(
+      kSpanIdBytes, trace_api::SpanId::kSize));
 }
 
 std::string ProtobufPathJson(const nostd::span<std::unique_ptr<sdk_logs::Recordable>> &recordables)
@@ -121,11 +118,10 @@ BothEncodings EncodeBothWays(std::size_t record_count, Record &&record)
     record(i, *protobuf_free_recordables.back());
   }
 
-  return BothEncodings{
-      ProtobufPathJson(nostd::span<std::unique_ptr<sdk_logs::Recordable>>(
-          protobuf_recordables.data(), protobuf_recordables.size())),
-      ProtobufFreePathJson(nostd::span<std::unique_ptr<sdk_logs::Recordable>>(
-          protobuf_free_recordables.data(), protobuf_free_recordables.size()))};
+  return BothEncodings{ProtobufPathJson(nostd::span<std::unique_ptr<sdk_logs::Recordable>>(
+                           protobuf_recordables.data(), protobuf_recordables.size())),
+                       ProtobufFreePathJson(nostd::span<std::unique_ptr<sdk_logs::Recordable>>(
+                           protobuf_free_recordables.data(), protobuf_free_recordables.size()))};
 }
 
 TEST(OtlpJsonLogEquivalence, EmptyBatch)
@@ -253,17 +249,15 @@ TEST(OtlpJsonLogEquivalence, BodyVariants)
       opentelemetry::common::AttributeValue(nostd::span<const bool>(bool_array, 2)),
       opentelemetry::common::AttributeValue(nostd::span<const std::int64_t>(int64_array, 3)),
       opentelemetry::common::AttributeValue(nostd::span<const double>(double_array, 2)),
-      opentelemetry::common::AttributeValue(
-          nostd::span<const nostd::string_view>(string_array, 2)),
+      opentelemetry::common::AttributeValue(nostd::span<const nostd::string_view>(string_array, 2)),
       opentelemetry::common::AttributeValue(nostd::span<const std::uint8_t>(byte_array, 4)),
   };
 
   for (std::size_t i = 0; i < bodies.size(); ++i)
   {
     const auto &body = bodies[i];
-    auto encodings   = EncodeBothWays(1, [&body](std::size_t, sdk_logs::Recordable &recordable) {
-      recordable.SetBody(body);
-    });
+    auto encodings   = EncodeBothWays(
+        1, [&body](std::size_t, sdk_logs::Recordable &recordable) { recordable.SetBody(body); });
     EXPECT_EQ(encodings.protobuf, encodings.protobuf_free) << "body alternative " << i;
   }
 }
@@ -366,8 +360,7 @@ TEST(OtlpJsonLogEquivalence, ZeroTimestampsAreAbsent)
   });
 
   EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
-  EXPECT_EQ(encodings.protobuf_free.find("UnixNano"), std::string::npos)
-      << encodings.protobuf_free;
+  EXPECT_EQ(encodings.protobuf_free.find("UnixNano"), std::string::npos) << encodings.protobuf_free;
 }
 
 TEST(OtlpJsonLogEquivalence, DroppedCountsFromLogRecordLimits)
@@ -404,8 +397,7 @@ TEST(OtlpJsonLogEquivalence, ValueLengthLimitTruncatesAttributesButNotBody)
   });
 
   EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
-  EXPECT_NE(encodings.protobuf_free.find("a body that is longer than the limit"),
-            std::string::npos)
+  EXPECT_NE(encodings.protobuf_free.find("a body that is longer than the limit"), std::string::npos)
       << encodings.protobuf_free;
 }
 
@@ -421,8 +413,7 @@ TEST(OtlpJsonLogEquivalence, EmptyAttributeKeyIsIgnored)
   EXPECT_EQ(encodings.protobuf, encodings.protobuf_free);
   // The only attributes in the body belong to the resource; the record carries
   // none, and no dropped count either.
-  EXPECT_NE(encodings.protobuf_free.find(
-                "\"logRecords\":[{\"body\":{\"stringValue\":\"kept\"}}]"),
+  EXPECT_NE(encodings.protobuf_free.find("\"logRecords\":[{\"body\":{\"stringValue\":\"kept\"}}]"),
             std::string::npos)
       << encodings.protobuf_free;
 }

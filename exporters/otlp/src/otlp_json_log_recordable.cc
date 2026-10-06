@@ -122,8 +122,7 @@ OtlpJsonLogRecordable::GetInstrumentationScope() const noexcept
   return opentelemetry::sdk::logs::ReadableLogRecord::GetDefaultInstrumentationScope();
 }
 
-void OtlpJsonLogRecordable::SetTimestamp(
-    opentelemetry::common::SystemTimestamp timestamp) noexcept
+void OtlpJsonLogRecordable::SetTimestamp(opentelemetry::common::SystemTimestamp timestamp) noexcept
 {
   time_unix_nano_ = static_cast<std::uint64_t>(timestamp.time_since_epoch().count());
 }
@@ -145,9 +144,8 @@ void OtlpJsonLogRecordable::SetBody(const opentelemetry::common::AttributeValue 
 {
   // No length limit: the protobuf path populates the body with the default
   // converter options, so attribute_value_length_limit does not reach it.
-  auto converted =
-      opentelemetry::sdk::common::VisitVariant(opentelemetry::sdk::common::AttributeConverter{},
-                                               message);
+  auto converted = opentelemetry::sdk::common::VisitVariant(
+      opentelemetry::sdk::common::AttributeConverter{}, message);
   has_body_ = true;
   if (converted.second)
   {

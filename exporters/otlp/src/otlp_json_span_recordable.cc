@@ -82,8 +82,9 @@ void OtlpJsonSpanRecordable::SetIdentity(const opentelemetry::trace::SpanContext
   trace_state_ = span_context.trace_state()->ToHeader();
 }
 
-void OtlpJsonSpanRecordable::SetAttribute(nostd::string_view key,
-                                          const opentelemetry::common::AttributeValue &value) noexcept
+void OtlpJsonSpanRecordable::SetAttribute(
+    nostd::string_view key,
+    const opentelemetry::common::AttributeValue &value) noexcept
 {
   if (key.empty())
   {
@@ -117,9 +118,8 @@ void OtlpJsonSpanRecordable::AddEvent(
   }
 
   Event event;
-  event.name = std::string(name);
-  event.time_unix_nano =
-      static_cast<std::uint64_t>(timestamp.time_since_epoch().count());
+  event.name           = std::string(name);
+  event.time_unix_nano = static_cast<std::uint64_t>(timestamp.time_since_epoch().count());
   CollectAttributes(attributes, span_limits_.event_attribute_count_limit,
                     span_limits_.attribute_value_length_limit, event.attributes,
                     event.dropped_attributes_count);

@@ -61,20 +61,17 @@ namespace trace_api = opentelemetry::trace;
 namespace sdk_trace = opentelemetry::sdk::trace;
 
 constexpr std::uint8_t kTraceIdBytes[trace_api::TraceId::kSize] = {
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-    0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
 constexpr std::uint8_t kSpanIdBytes[trace_api::SpanId::kSize]       = {0x11, 0x12, 0x13, 0x14,
-                                                                      0x15, 0x16, 0x17, 0x18};
+                                                                       0x15, 0x16, 0x17, 0x18};
 constexpr std::uint8_t kParentSpanIdBytes[trace_api::SpanId::kSize] = {0x21, 0x22, 0x23, 0x24,
-                                                                      0x25, 0x26, 0x27, 0x28};
+                                                                       0x25, 0x26, 0x27, 0x28};
 constexpr std::uint8_t kLinkTraceIdBytes[trace_api::TraceId::kSize] = {
-    0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
-    0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40};
+    0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40};
 constexpr std::uint8_t kLinkSpanIdBytes[trace_api::SpanId::kSize] = {0x41, 0x42, 0x43, 0x44,
-                                                                    0x45, 0x46, 0x47, 0x48};
+                                                                     0x45, 0x46, 0x47, 0x48};
 
-std::string ProtobufPathJson(
-    const nostd::span<std::unique_ptr<sdk_trace::Recordable>> &recordables)
+std::string ProtobufPathJson(const nostd::span<std::unique_ptr<sdk_trace::Recordable>> &recordables)
 {
   proto::collector::trace::v1::ExportTraceServiceRequest request;
   OtlpRecordableUtils::PopulateRequest(recordables, &request);
@@ -117,11 +114,10 @@ BothEncodings EncodeBothWays(std::size_t span_count, Record &&record)
     record(i, *protobuf_free_recordables.back());
   }
 
-  return BothEncodings{
-      ProtobufPathJson(nostd::span<std::unique_ptr<sdk_trace::Recordable>>(
-          protobuf_recordables.data(), protobuf_recordables.size())),
-      ProtobufFreePathJson(nostd::span<std::unique_ptr<sdk_trace::Recordable>>(
-          protobuf_free_recordables.data(), protobuf_free_recordables.size()))};
+  return BothEncodings{ProtobufPathJson(nostd::span<std::unique_ptr<sdk_trace::Recordable>>(
+                           protobuf_recordables.data(), protobuf_recordables.size())),
+                       ProtobufFreePathJson(nostd::span<std::unique_ptr<sdk_trace::Recordable>>(
+                           protobuf_free_recordables.data(), protobuf_free_recordables.size()))};
 }
 
 trace_api::SpanContext MakeSpanContext(const std::uint8_t *trace_id_bytes,
@@ -133,14 +129,12 @@ trace_api::SpanContext MakeSpanContext(const std::uint8_t *trace_id_bytes,
   {
     trace_state = trace_api::TraceState::FromHeader(trace_state_header);
   }
-  return trace_api::SpanContext(trace_api::TraceId(nostd::span<const std::uint8_t,
-                                                               trace_api::TraceId::kSize>(
-                                    trace_id_bytes, trace_api::TraceId::kSize)),
-                                trace_api::SpanId(nostd::span<const std::uint8_t,
-                                                              trace_api::SpanId::kSize>(
-                                    span_id_bytes, trace_api::SpanId::kSize)),
-                                trace_api::TraceFlags(trace_api::TraceFlags::kIsSampled), false,
-                                trace_state);
+  return trace_api::SpanContext(
+      trace_api::TraceId(nostd::span<const std::uint8_t, trace_api::TraceId::kSize>(
+          trace_id_bytes, trace_api::TraceId::kSize)),
+      trace_api::SpanId(nostd::span<const std::uint8_t, trace_api::SpanId::kSize>(
+          span_id_bytes, trace_api::SpanId::kSize)),
+      trace_api::TraceFlags(trace_api::TraceFlags::kIsSampled), false, trace_state);
 }
 
 TEST(OtlpJsonTraceEquivalence, EmptyBatch)
@@ -169,10 +163,10 @@ TEST(OtlpJsonTraceEquivalence, FullySpecifiedSpan)
   auto encodings = EncodeBothWays(1, [](std::size_t, sdk_trace::Recordable &recordable) {
     recordable.SetResource(resource);
     recordable.SetInstrumentationScope(*scope);
-    recordable.SetIdentity(MakeSpanContext(kTraceIdBytes, kSpanIdBytes, "vendor=value"),
-                           trace_api::SpanId(nostd::span<const std::uint8_t,
-                                                         trace_api::SpanId::kSize>(
-                               kParentSpanIdBytes, trace_api::SpanId::kSize)));
+    recordable.SetIdentity(
+        MakeSpanContext(kTraceIdBytes, kSpanIdBytes, "vendor=value"),
+        trace_api::SpanId(nostd::span<const std::uint8_t, trace_api::SpanId::kSize>(
+            kParentSpanIdBytes, trace_api::SpanId::kSize)));
     recordable.SetName("equivalence span");
     recordable.SetSpanKind(trace_api::SpanKind::kServer);
     recordable.SetTraceFlags(trace_api::TraceFlags(trace_api::TraceFlags::kIsSampled));
@@ -191,11 +185,11 @@ TEST(OtlpJsonTraceEquivalence, FullySpecifiedSpan)
     recordable.SetAttribute("double_attr", 3.5);
     recordable.SetAttribute("string_attr", "a string value");
 
-    const bool bool_array[]                = {true, false};
-    const std::int64_t int64_array[]       = {-1, 0, 1};
-    const double double_array[]            = {1.5, 2.5};
+    const bool bool_array[]                 = {true, false};
+    const std::int64_t int64_array[]        = {-1, 0, 1};
+    const double double_array[]             = {1.5, 2.5};
     const nostd::string_view string_array[] = {"one", "two"};
-    const std::uint8_t byte_array[]        = {0xde, 0xad, 0xbe, 0xef};
+    const std::uint8_t byte_array[]         = {0xde, 0xad, 0xbe, 0xef};
     recordable.SetAttribute("bool_array", nostd::span<const bool>(bool_array, 2));
     recordable.SetAttribute("int64_array", nostd::span<const std::int64_t>(int64_array, 3));
     recordable.SetAttribute("double_array", nostd::span<const double>(double_array, 2));
@@ -223,8 +217,8 @@ TEST(OtlpJsonTraceEquivalence, FullySpecifiedSpan)
 
 TEST(OtlpJsonTraceEquivalence, StatusVariants)
 {
-  for (const auto code : {trace_api::StatusCode::kUnset, trace_api::StatusCode::kOk,
-                          trace_api::StatusCode::kError})
+  for (const auto code :
+       {trace_api::StatusCode::kUnset, trace_api::StatusCode::kOk, trace_api::StatusCode::kError})
   {
     auto encodings = EncodeBothWays(1, [code](std::size_t, sdk_trace::Recordable &recordable) {
       recordable.SetIdentity(MakeSpanContext(kTraceIdBytes, kSpanIdBytes), trace_api::SpanId());
@@ -238,15 +232,16 @@ TEST(OtlpJsonTraceEquivalence, StatusVariants)
 
 TEST(OtlpJsonTraceEquivalence, SpanKinds)
 {
-  for (const auto kind : {trace_api::SpanKind::kInternal, trace_api::SpanKind::kServer,
-                          trace_api::SpanKind::kClient, trace_api::SpanKind::kProducer,
-                          trace_api::SpanKind::kConsumer})
+  for (const auto kind :
+       {trace_api::SpanKind::kInternal, trace_api::SpanKind::kServer, trace_api::SpanKind::kClient,
+        trace_api::SpanKind::kProducer, trace_api::SpanKind::kConsumer})
   {
     auto encodings = EncodeBothWays(1, [kind](std::size_t, sdk_trace::Recordable &recordable) {
       recordable.SetIdentity(MakeSpanContext(kTraceIdBytes, kSpanIdBytes), trace_api::SpanId());
       recordable.SetSpanKind(kind);
     });
-    EXPECT_EQ(encodings.protobuf, encodings.protobuf_free) << "span kind " << static_cast<int>(kind);
+    EXPECT_EQ(encodings.protobuf, encodings.protobuf_free)
+        << "span kind " << static_cast<int>(kind);
   }
 }
 
@@ -254,10 +249,8 @@ TEST(OtlpJsonTraceEquivalence, SpanKinds)
 // the grouping and the order the groups come out in.
 TEST(OtlpJsonTraceEquivalence, GroupsByResourceAndScope)
 {
-  static auto resource_a =
-      opentelemetry::sdk::resource::Resource::Create({{"service.name", "a"}});
-  static auto resource_b =
-      opentelemetry::sdk::resource::Resource::Create({{"service.name", "b"}});
+  static auto resource_a = opentelemetry::sdk::resource::Resource::Create({{"service.name", "a"}});
+  static auto resource_b = opentelemetry::sdk::resource::Resource::Create({{"service.name", "b"}});
   static auto scope_one =
       opentelemetry::sdk::instrumentationscope::InstrumentationScope::Create("scope_one", "1");
   static auto scope_two =
@@ -348,12 +341,12 @@ TEST(OtlpJsonTraceEquivalence, DroppedCountsFromSpanLimits)
     recordable.SetAttribute("dropped", "no");
 
     std::map<std::string, std::string> event_attributes = {{"kept", "yes"}, {"dropped", "no"}};
-    recordable.AddEvent(
-        "kept event", opentelemetry::common::SystemTimestamp(std::chrono::nanoseconds(1)),
-        opentelemetry::common::MakeAttributes(event_attributes));
-    recordable.AddEvent(
-        "dropped event", opentelemetry::common::SystemTimestamp(std::chrono::nanoseconds(2)),
-        opentelemetry::common::MakeAttributes(event_attributes));
+    recordable.AddEvent("kept event",
+                        opentelemetry::common::SystemTimestamp(std::chrono::nanoseconds(1)),
+                        opentelemetry::common::MakeAttributes(event_attributes));
+    recordable.AddEvent("dropped event",
+                        opentelemetry::common::SystemTimestamp(std::chrono::nanoseconds(2)),
+                        opentelemetry::common::MakeAttributes(event_attributes));
 
     std::map<std::string, std::string> link_attributes = {{"kept", "yes"}, {"dropped", "no"}};
     recordable.AddLink(MakeSpanContext(kLinkTraceIdBytes, kLinkSpanIdBytes),

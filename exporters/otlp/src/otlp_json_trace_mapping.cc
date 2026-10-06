@@ -86,10 +86,9 @@ std::int32_t MapStatusCode(opentelemetry::trace::StatusCode code) noexcept
  * message carrying attributes ends with. Both are omitted at their default,
  * an empty list and a zero count.
  */
-void WriteAttributesAndDroppedCount(
-    JsonWriter &writer,
-    const OtlpJsonSpanRecordable::OrderedAttributes &attributes,
-    std::uint32_t dropped_count) noexcept
+void WriteAttributesAndDroppedCount(JsonWriter &writer,
+                                    const OtlpJsonSpanRecordable::OrderedAttributes &attributes,
+                                    std::uint32_t dropped_count) noexcept
 {
   json_mapping::WriteAttributes(writer, attributes);
   if (dropped_count != 0)
@@ -120,8 +119,7 @@ void WriteLink(JsonWriter &writer, const OtlpJsonSpanRecordable::Link &link) noe
 {
   writer.BeginObject();
   writer.Key("traceId");
-  json_mapping::WriteHexId(writer, link.trace_id.Id().data(),
-                           opentelemetry::trace::TraceId::kSize);
+  json_mapping::WriteHexId(writer, link.trace_id.Id().data(), opentelemetry::trace::TraceId::kSize);
   writer.Key("spanId");
   json_mapping::WriteHexId(writer, link.span_id.Id().data(), opentelemetry::trace::SpanId::kSize);
   if (!link.trace_state.empty())
@@ -282,7 +280,8 @@ struct ScopePointerHasher
 
 struct ScopePointerEqual
 {
-  bool operator()(const InstrumentationScope *left, const InstrumentationScope *right) const noexcept
+  bool operator()(const InstrumentationScope *left,
+                  const InstrumentationScope *right) const noexcept
   {
     if (left == right)
     {

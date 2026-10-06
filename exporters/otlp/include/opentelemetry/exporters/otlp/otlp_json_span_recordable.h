@@ -72,7 +72,7 @@ public:
   /** The status a span carries, absent until SetStatus is called. */
   struct Status
   {
-    bool is_set = false;
+    bool is_set                           = false;
     opentelemetry::trace::StatusCode code = opentelemetry::trace::StatusCode::kUnset;
     std::string message;
   };

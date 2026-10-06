@@ -37,9 +37,9 @@ using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 bool HasAnyField(const OtlpJsonLogRecordable &record) noexcept
 {
   return record.GetTimestamp() != 0 || record.GetSeverityNumber() != 0 ||
-         !record.GetSeverityText().empty() || record.HasBody() ||
-         !record.GetAttributes().empty() || record.GetDroppedAttributesCount() != 0 ||
-         record.GetFlags() != 0 || record.GetTraceId().IsValid() || record.GetSpanId().IsValid() ||
+         !record.GetSeverityText().empty() || record.HasBody() || !record.GetAttributes().empty() ||
+         record.GetDroppedAttributesCount() != 0 || record.GetFlags() != 0 ||
+         record.GetTraceId().IsValid() || record.GetSpanId().IsValid() ||
          record.GetObservedTimestamp() != 0 || !record.GetEventName().empty();
 }
 
