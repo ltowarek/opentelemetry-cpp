@@ -54,7 +54,10 @@ Increment the:
   application decision made at registration time. A node asking for
   `encoding: protobuf` is warned about and exported as JSON, since that is the
   only encoding these exporters produce. The configuration example gains a
-  `--json-builders` flag that registers them.
+  `--json-builders` flag that registers them. The three builder targets are built
+  only with `OTELCPP_WITH_JSON_WRITER_NLOHMANN` on, because a configuration file
+  cannot supply a `JsonWriterFactory` and so a builder without a compiled-in
+  backend could only produce an exporter that fails.
 
 * [BUILD] `opentelemetry_exporter_otlp_builder_utils` links
   `opentelemetry_otlp_common` rather than `opentelemetry_otlp_recordable`. It
@@ -62,19 +65,6 @@ Increment the:
   pulled the protobuf runtime into everything linking it, including the
   protobuf-free OTLP/JSON builders. Consumers relying on it to supply
   `opentelemetry_otlp_recordable` transitively must now link that themselves.
-
-* [BUILD] Add `OTELCPP_WITH_JSON_WRITER_NLOHMANN`, which controls whether the
-  nlohmann-json `JsonWriter` backend is compiled. It defaults ON whenever an
-  OTLP exporter that emits JSON is enabled, so existing builds are unaffected.
-  `OTELCPP_WITH_OTLP_HTTP` and `OTELCPP_WITH_OTLP_FILE` no longer force
-  nlohmann-json on, so a consumer supplying their own `JsonWriterFactory` can
-  now drop it from the build entirely. The backend moves to its own target,
-  `opentelemetry_exporter_otlp_json_writer_nlohmann`, leaving
-  `opentelemetry_exporter_otlp_json_writer` as the interface target, mirroring
-  how `opentelemetry_http_client` and `opentelemetry_http_client_curl` are
-  split. Bazel gets the equivalent `--//exporters/otlp:with_json_writer_nlohmann`
-  flag. A translation unit calling `detail::GetDefaultJsonWriterFactory()` must
-  now link the writer target to see the backend.
 
 * [EXPORTER] The protobuf-free OTLP/JSON exporters now take their `JsonWriter` and
   `JsonReader` backends from `json_writer_factory` / `json_reader_factory` on the HTTP
@@ -121,16 +111,6 @@ Increment the:
   `OTELCPP_WITH_JSON_WRITER_NLOHMANN` with the writer, since it shares the
   backend library. Nothing calls it yet; `OtlpHttpClient` still parses
   responses with protobuf.
-
-* [EXPORTER] Add a `JsonWriter` token interface for OTLP/JSON serialization,
-  with an nlohmann-json backend behind the new
-  `OTELCPP_WITH_JSON_WRITER_NLOHMANN` option, and route the OTLP HTTP and file
-  clients through it. Their two near-identical reflection-based converters are
-  replaced by a single shared one. The exporter constructors and factories
-  take an optional `JsonWriterFactory`, so a custom backend can be supplied
-  the way a custom `HttpClientFactory` already is. The emitted JSON is
-  unchanged.
-  [#2541](https://github.com/open-telemetry/opentelemetry-cpp/issues/2541)
 
 * [EXPORTER] Add a `JsonWriter` interface for OTLP/JSON serialization, so a
   consumer can supply their own JSON backend in place of the default
