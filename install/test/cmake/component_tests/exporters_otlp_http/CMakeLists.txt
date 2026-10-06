@@ -11,10 +11,9 @@ if(NOT TARGET protobuf::libprotobuf)
 endif()
 
 # The protobuf-free exporters ship in this component alongside the protobuf
-# ones, so "protobuf::libprotobuf is not defined" cannot be the assertion --
-# the component requires it for the protobuf exporters. What is checkable is
-# that no protobuf reaches the JSON targets through their exported link
-# interface.
+# ones, so "protobuf::libprotobuf is not defined" cannot be the assertion -- the
+# component requires it for the protobuf exporters. What is checkable is that no
+# protobuf reaches the JSON targets through their exported link interface.
 #
 # This inspects the interface only. A PRIVATE dependency of a shared library is
 # not part of it, so in a BUILD_SHARED_LIBS build this proves what a consumer
@@ -58,25 +57,28 @@ function(otel_assert_link_closure_has_no_protobuf _root)
   endwhile()
 endfunction()
 
-foreach(_json_target otlp_json_http_client otlp_json_http_exporter
-                     otlp_json_http_log_record_exporter
-                     otlp_json_http_metric_exporter)
+foreach(_json_target
+        otlp_json_http_client otlp_json_http_exporter
+        otlp_json_http_log_record_exporter otlp_json_http_metric_exporter)
   if(NOT TARGET opentelemetry-cpp::${_json_target})
     message(FATAL_ERROR "opentelemetry-cpp::${_json_target} target not found")
   endif()
   otel_assert_link_closure_has_no_protobuf(opentelemetry-cpp::${_json_target})
 endforeach()
 
-# The configuration builders ship only when a JSON writer backend is compiled in, since a
-# configuration file cannot supply a factory. An install made without one legitimately has
-# none, so their absence is not a failure -- but when they are there they carry the same
-# protobuf-free guarantee, and the link below has to follow whichever case this install is.
+# The configuration builders ship only when a JSON writer backend is compiled
+# in, since a configuration file cannot supply a factory. An install made
+# without one legitimately has none, so their absence is not a failure -- but
+# when they are there they carry the same protobuf-free guarantee, and the link
+# below has to follow whichever case this install is.
 set(_json_builder_targets "")
-foreach(_json_builder otlp_json_http_exporter_builder
-                      otlp_json_http_log_record_exporter_builder
-                      otlp_json_http_metric_exporter_builder)
+foreach(
+  _json_builder
+  otlp_json_http_exporter_builder otlp_json_http_log_record_exporter_builder
+  otlp_json_http_metric_exporter_builder)
   if(TARGET opentelemetry-cpp::${_json_builder})
-    otel_assert_link_closure_has_no_protobuf(opentelemetry-cpp::${_json_builder})
+    otel_assert_link_closure_has_no_protobuf(
+      opentelemetry-cpp::${_json_builder})
     list(APPEND _json_builder_targets opentelemetry-cpp::${_json_builder})
   endif()
 endforeach()

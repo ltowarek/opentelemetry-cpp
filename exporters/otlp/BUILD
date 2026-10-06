@@ -1202,7 +1202,11 @@ cc_test(
 
 cc_test(
     name = "otlp_json_http_exporter_test",
-    srcs = ["test/otlp_json_http_exporter_test.cc"],
+    srcs = [
+        "test/otlp_json_http_exporter_test.cc",
+        "test/otlp_stub_json_reader.h",
+        "test/otlp_stub_json_writer.h",
+    ],
     tags = [
         "otlp",
         "test",
@@ -1237,7 +1241,10 @@ cc_test(
 
 cc_test(
     name = "otlp_json_http_log_record_exporter_test",
-    srcs = ["test/otlp_json_http_log_record_exporter_test.cc"],
+    srcs = [
+        "test/otlp_json_http_log_record_exporter_test.cc",
+        "test/otlp_stub_json_writer.h",
+    ],
     tags = [
         "otlp",
         "test",
@@ -1272,7 +1279,10 @@ cc_test(
 
 cc_test(
     name = "otlp_json_http_metric_exporter_test",
-    srcs = ["test/otlp_json_http_metric_exporter_test.cc"],
+    srcs = [
+        "test/otlp_json_http_metric_exporter_test.cc",
+        "test/otlp_stub_json_writer.h",
+    ],
     tags = [
         "otlp",
         "test",
@@ -1832,10 +1842,6 @@ otel_cc_benchmark(
         "otlp_http",
         "test",
     ],
-    target_compatible_with = select({
-        ":json_writer_nlohmann_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         ":otlp_json_converter",
         ":otlp_json_mapping",

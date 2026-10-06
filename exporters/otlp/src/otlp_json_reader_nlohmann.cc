@@ -146,7 +146,7 @@ private:
       return nullptr;
     }
     // assign() reuses whatever capacity the buffer already has, so a lookup does not
-    // construct a string for the key the way PR-sized field names otherwise would.
+    // construct a string for the key, which longer field names otherwise do on every call.
     lookup_key_.assign(key.data(), key.size());
     const auto it = stack_.back()->find(lookup_key_);
     return it == stack_.back()->end() ? nullptr : &(*it);

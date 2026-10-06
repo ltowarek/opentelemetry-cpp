@@ -39,21 +39,19 @@ namespace otlp
 namespace
 {
 
-// The runtime options are where a consumer supplies a backend, the way
-// OtlpHttpClient already takes one, so an exporter built without explicit
-// factories has to look there before falling back to the compiled-in default.
+// A null factory means "use the compiled-in default" wherever one can be supplied: on the
+// runtime options, which default to empty, and on the constructor overload that takes
+// factories directly, which would otherwise store a null and dereference it on export.
 std::shared_ptr<JsonWriterFactory> ResolveJsonWriterFactory(
-    const OtlpHttpExporterRuntimeOptions &runtime_options) noexcept
+    const std::shared_ptr<JsonWriterFactory> &json_writer_factory) noexcept
 {
-  return runtime_options.json_writer_factory ? runtime_options.json_writer_factory
-                                             : detail::GetDefaultJsonWriterFactory();
+  return json_writer_factory ? json_writer_factory : detail::GetDefaultJsonWriterFactory();
 }
 
 std::shared_ptr<JsonReaderFactory> ResolveJsonReaderFactory(
-    const OtlpHttpExporterRuntimeOptions &runtime_options) noexcept
+    const std::shared_ptr<JsonReaderFactory> &json_reader_factory) noexcept
 {
-  return runtime_options.json_reader_factory ? runtime_options.json_reader_factory
-                                             : detail::GetDefaultJsonReaderFactory();
+  return json_reader_factory ? json_reader_factory : detail::GetDefaultJsonReaderFactory();
 }
 
 }  // namespace
@@ -79,8 +77,8 @@ OtlpJsonHttpExporter::OtlpJsonHttpExporter(
     : OtlpJsonHttpExporter(options,
                            runtime_options,
                            std::move(http_client),
-                           ResolveJsonWriterFactory(runtime_options),
-                           ResolveJsonReaderFactory(runtime_options))
+                           ResolveJsonWriterFactory(runtime_options.json_writer_factory),
+                           ResolveJsonReaderFactory(runtime_options.json_reader_factory))
 {}
 
 OtlpJsonHttpExporter::OtlpJsonHttpExporter(
@@ -93,8 +91,8 @@ OtlpJsonHttpExporter::OtlpJsonHttpExporter(
       transport_(std::make_unique<detail::OtlpHttpTransport>(
           detail::MakeOtlpJsonHttpClientOptions(options, runtime_options),
           std::move(http_client))),
-      json_writer_factory_(json_writer_factory),
-      json_reader_factory_(json_reader_factory)
+      json_writer_factory_(ResolveJsonWriterFactory(json_writer_factory)),
+      json_reader_factory_(ResolveJsonReaderFactory(json_reader_factory))
 {}
 
 OtlpJsonHttpExporter::~OtlpJsonHttpExporter() = default;

@@ -32,8 +32,8 @@ set(OPENTELEMETRY_OTLP_TARGETS opentelemetry_otlp_common)
 # opentelemetry_otlp_recordable
 #
 # Builds the OTLP protobuf messages from SDK data, so it exists only where
-# protobuf is materialized (see OTELCPP_OTLP_PROTOBUF_REQUIRED in the
-# top-level CMakeLists.txt). The protobuf-free OTLP/JSON exporters use
+# protobuf is materialized (see OTELCPP_OTLP_PROTOBUF_REQUIRED in the top-level
+# CMakeLists.txt). The protobuf-free OTLP/JSON exporters use
 # opentelemetry_exporter_otlp_json_mapping instead.
 #
 
@@ -84,8 +84,8 @@ target_include_directories(
 # otlp_common rather than otlp_recordable: this target reads configuration
 # models and environment defaults and touches no recordable, and depending on
 # the protobuf one would pull the message runtime into every builder that links
-# it -- including the protobuf-free OTLP/JSON builders, whose whole point is
-# not to have it.
+# it -- including the protobuf-free OTLP/JSON builders, whose whole point is not
+# to have it.
 target_link_libraries(
   opentelemetry_exporter_otlp_builder_utils
   PUBLIC opentelemetry_otlp_common opentelemetry_configuration_core)
@@ -186,9 +186,9 @@ endif()
 #
 # The reader half of the JSON seam, laid out exactly like the writer: a
 # header-only facade plus a selectable backend. It rides
-# OTELCPP_WITH_JSON_WRITER_NLOHMANN rather than an option of its own,
-# because a separate option would let a consumer exclude the writer backend
-# and still pull nlohmann in through the reader.
+# OTELCPP_WITH_JSON_WRITER_NLOHMANN rather than an option of its own, because a
+# separate option would let a consumer exclude the writer backend and still pull
+# nlohmann in through the reader.
 #
 
 add_library(opentelemetry_exporter_otlp_json_reader INTERFACE)
@@ -245,7 +245,8 @@ if(OTELCPP_INSTALL)
   endif()
 
   opentelemetry_add_pkgconfig(
-    exporter_otlp_json_reader "OpenTelemetry OTLP - JSON Reader"
+    exporter_otlp_json_reader
+    "OpenTelemetry OTLP - JSON Reader"
     "Document-shaped JSON reader interface, with an nlohmann-backed default implementation."
     "${OPENTELEMETRY_OTLP_JSON_READER_PC_REQUIRES}")
 
@@ -261,13 +262,14 @@ endif()
 #
 # opentelemetry_exporter_otlp_json_partial_success
 #
-# The OTLP-aware half of the read side: what a partial-success response
-# means, kept out of the reader so that stays a generic JSON accessor, the
-# same split the mapping keeps from the writer.
+# The OTLP-aware half of the read side: what a partial-success response means,
+# kept out of the reader so that stays a generic JSON accessor, the same split
+# the mapping keeps from the writer.
 #
 
-add_library(opentelemetry_exporter_otlp_json_partial_success
-            ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_partial_success.cc)
+add_library(
+  opentelemetry_exporter_otlp_json_partial_success
+  ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_partial_success.cc)
 
 set_target_properties(opentelemetry_exporter_otlp_json_partial_success
                       PROPERTIES EXPORT_NAME otlp_json_partial_success)
@@ -285,7 +287,8 @@ target_link_libraries(
 
 if(OTELCPP_INSTALL)
   opentelemetry_add_pkgconfig(
-    exporter_otlp_json_partial_success "OpenTelemetry OTLP - JSON Partial Success"
+    exporter_otlp_json_partial_success
+    "OpenTelemetry OTLP - JSON Partial Success"
     "Protobuf-free parsing of OTLP/JSON export responses."
     "opentelemetry_common opentelemetry_exporter_otlp_json_reader")
 endif()
@@ -294,9 +297,9 @@ endif()
 # opentelemetry_exporter_otlp_json_mapping
 #
 # Maps SDK data to OTLP/JSON without protobuf. Deliberately depends on the
-# writer facade and the SDK only, so that a build with no OTLP protobuf
-# exporter still gets it, and so that a change here cannot pull protobuf back
-# into a consumer that has shed it.
+# writer facade and the SDK only, so that a build with no OTLP protobuf exporter
+# still gets it, and so that a change here cannot pull protobuf back into a
+# consumer that has shed it.
 #
 
 add_library(
@@ -333,7 +336,8 @@ endif()
 
 if(OTELCPP_INSTALL)
   opentelemetry_add_pkgconfig(
-    exporter_otlp_json_mapping "OpenTelemetry OTLP - JSON Mapping"
+    exporter_otlp_json_mapping
+    "OpenTelemetry OTLP - JSON Mapping"
     "Protobuf-free mapping from SDK data to OTLP/JSON."
     "opentelemetry_trace opentelemetry_metrics opentelemetry_logs opentelemetry_resources opentelemetry_common opentelemetry_exporter_otlp_json_writer"
   )
@@ -630,13 +634,12 @@ if(OTELCPP_WITH_OTLP_HTTP)
   # opentelemetry_exporter_otlp_http_transport
   #
   # The OTLP/HTTP send path, with no protobuf on either end. Deliberately does
-  # not link the message runtime, so that "does this exporter need protobuf?"
-  # is answerable by reading this file.
+  # not link the message runtime, so that "does this exporter need protobuf?" is
+  # answerable by reading this file.
   #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_transport
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_transport.cc)
+  add_library(opentelemetry_exporter_otlp_http_transport
+              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_transport.cc)
   set_target_properties(opentelemetry_exporter_otlp_http_transport
                         PROPERTIES EXPORT_NAME otlp_http_transport)
   set_target_version(opentelemetry_exporter_otlp_http_transport)
@@ -659,8 +662,9 @@ if(OTELCPP_WITH_OTLP_HTTP)
   # opentelemetry_exporter_otlp_http_client
   #
   # The protobuf-based send path, kept only when OTELCPP_WITH_OTLP_HTTP_PROTOBUF
-  # is on -- the OTLP/JSON exporters use opentelemetry_exporter_otlp_json_http_client
-  # instead and never link this or opentelemetry_proto.
+  # is on -- the OTLP/JSON exporters use
+  # opentelemetry_exporter_otlp_json_http_client instead and never link this or
+  # opentelemetry_proto.
   #
 
   if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
@@ -677,7 +681,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
     target_link_libraries(
       opentelemetry_exporter_otlp_http_client
-      PUBLIC opentelemetry_http_client opentelemetry_exporter_otlp_http_transport
+      PUBLIC opentelemetry_http_client
+             opentelemetry_exporter_otlp_http_transport
       PRIVATE opentelemetry_common opentelemetry_exporter_otlp_json_converter)
 
     target_include_directories(
@@ -693,14 +698,16 @@ if(OTELCPP_WITH_OTLP_HTTP)
   # opentelemetry_exporter_otlp_http_options
   #
   # The three exporter option structs. Their own target because both the
-  # protobuf and the protobuf-free exporter of a signal need them, and
-  # compiling them into each would put the same symbols in a binary twice.
+  # protobuf and the protobuf-free exporter of a signal need them, and compiling
+  # them into each would put the same symbols in a binary twice.
   #
 
   add_library(
     opentelemetry_exporter_otlp_http_options
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http.cc
-    src/otlp_http_exporter_options.cc src/otlp_http_log_record_exporter_options.cc
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+    src/otlp_http.cc
+    src/otlp_http_exporter_options.cc
+    src/otlp_http_log_record_exporter_options.cc
     src/otlp_http_metric_exporter_options.cc)
 
   set_target_properties(opentelemetry_exporter_otlp_http_options
@@ -747,13 +754,14 @@ if(OTELCPP_WITH_OTLP_HTTP)
   # opentelemetry_exporter_otlp_json_http
   #
   # One target per signal, as the protobuf exporters have, so that a consumer
-  # exporting only traces does not link the metric and log mappings too. That
-  # is the whole point on a device with no room for the protobuf runtime.
+  # exporting only traces does not link the metric and log mappings too. That is
+  # the whole point on a device with no room for the protobuf runtime.
   #
 
-  add_library(opentelemetry_exporter_otlp_json_http
-              ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_exporter.cc
-              src/otlp_json_http_exporter_factory.cc)
+  add_library(
+    opentelemetry_exporter_otlp_json_http
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_exporter.cc
+    src/otlp_json_http_exporter_factory.cc)
 
   set_target_properties(opentelemetry_exporter_otlp_json_http
                         PROPERTIES EXPORT_NAME otlp_json_http_exporter)
@@ -765,7 +773,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
            opentelemetry_exporter_otlp_json_http_client
            opentelemetry_exporter_otlp_json_mapping)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS opentelemetry_exporter_otlp_json_http)
+  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+       opentelemetry_exporter_otlp_json_http)
 
   #
   # opentelemetry_exporter_otlp_json_http_log
@@ -773,7 +782,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   add_library(
     opentelemetry_exporter_otlp_json_http_log
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_exporter.cc
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+    src/otlp_json_http_log_record_exporter.cc
     src/otlp_json_http_log_record_exporter_factory.cc)
 
   set_target_properties(
@@ -796,7 +806,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   add_library(
     opentelemetry_exporter_otlp_json_http_metric
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_metric_exporter.cc
+    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+    src/otlp_json_http_metric_exporter.cc
     src/otlp_json_http_metric_exporter_factory.cc)
 
   set_target_properties(opentelemetry_exporter_otlp_json_http_metric
@@ -812,19 +823,22 @@ if(OTELCPP_WITH_OTLP_HTTP)
   list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
        opentelemetry_exporter_otlp_json_http_metric)
 
-  # A configuration file names an exporter but cannot hand it a JsonWriterFactory, so a
-  # builder is only usable when a backend is compiled in; registering one without a backend
-  # would produce an exporter that terminates on its first export.
+  # A configuration file names an exporter but cannot hand it a
+  # JsonWriterFactory, so a builder is only usable when a backend is compiled
+  # in; registering one without a backend would produce an exporter that
+  # terminates on its first export.
   if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
     #
     # opentelemetry_exporter_otlp_json_http_builder
     #
 
-    add_library(opentelemetry_exporter_otlp_json_http_builder
-                ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_json_http_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_span_builder.cc)
 
-    set_target_properties(opentelemetry_exporter_otlp_json_http_builder
-                          PROPERTIES EXPORT_NAME otlp_json_http_exporter_builder)
+    set_target_properties(
+      opentelemetry_exporter_otlp_json_http_builder
+      PROPERTIES EXPORT_NAME otlp_json_http_exporter_builder)
     set_target_version(opentelemetry_exporter_otlp_json_http_builder)
 
     target_link_libraries(
@@ -841,7 +855,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
     add_library(
       opentelemetry_exporter_otlp_json_http_log_builder
-      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_log_record_builder.cc)
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+      src/otlp_json_http_log_record_builder.cc)
 
     set_target_properties(
       opentelemetry_exporter_otlp_json_http_log_builder
@@ -862,7 +877,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
     add_library(
       opentelemetry_exporter_otlp_json_http_metric_builder
-      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_json_http_push_metric_builder.cc)
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+      src/otlp_json_http_push_metric_builder.cc)
 
     set_target_properties(
       opentelemetry_exporter_otlp_json_http_metric_builder
@@ -886,150 +902,154 @@ if(OTELCPP_WITH_OTLP_HTTP)
 
   if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
 
-  #
-  # opentelemetry_exporter_otlp_http
-  #
+    #
+    # opentelemetry_exporter_otlp_http
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_exporter.cc
-    src/otlp_http_exporter_factory.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_exporter.cc
+      src/otlp_http_exporter_factory.cc)
 
-  set_target_properties(opentelemetry_exporter_otlp_http
-                        PROPERTIES EXPORT_NAME otlp_http_exporter)
-  set_target_version(opentelemetry_exporter_otlp_http)
+    set_target_properties(opentelemetry_exporter_otlp_http
+                          PROPERTIES EXPORT_NAME otlp_http_exporter)
+    set_target_version(opentelemetry_exporter_otlp_http)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http
-    PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
-           opentelemetry_exporter_otlp_http_client
-           opentelemetry_exporter_otlp_http_options)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http
+      PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
+             opentelemetry_exporter_otlp_http_client
+             opentelemetry_exporter_otlp_http_options)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS opentelemetry_exporter_otlp_http)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+         opentelemetry_exporter_otlp_http)
 
-  #
-  # opentelemetry_exporter_otlp_http_builder
-  #
+    #
+    # opentelemetry_exporter_otlp_http_builder
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_builder
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_span_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_span_builder.cc)
 
-  set_target_properties(opentelemetry_exporter_otlp_http_builder
-                        PROPERTIES EXPORT_NAME otlp_http_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_http_builder)
+    set_target_properties(opentelemetry_exporter_otlp_http_builder
+                          PROPERTIES EXPORT_NAME otlp_http_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_http_builder)
 
-  target_include_directories(
-    opentelemetry_exporter_otlp_http_builder
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-           "$<INSTALL_INTERFACE:include>")
+    target_include_directories(
+      opentelemetry_exporter_otlp_http_builder
+      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+             "$<INSTALL_INTERFACE:include>")
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_builder
-    PUBLIC opentelemetry_configuration_core opentelemetry_trace
-    PRIVATE opentelemetry_exporter_otlp_http
-            opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_builder
+      PUBLIC opentelemetry_configuration_core opentelemetry_trace
+      PRIVATE opentelemetry_exporter_otlp_http
+              opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_http_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_http_builder)
 
-  #
-  # opentelemetry_exporter_otlp_http_log
-  #
+    #
+    # opentelemetry_exporter_otlp_http_log
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_log
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_log_record_exporter.cc
-    src/otlp_http_log_record_exporter_factory.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http_log
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+      src/otlp_http_log_record_exporter.cc
+      src/otlp_http_log_record_exporter_factory.cc)
 
-  set_target_properties(opentelemetry_exporter_otlp_http_log
-                        PROPERTIES EXPORT_NAME otlp_http_log_record_exporter)
-  set_target_version(opentelemetry_exporter_otlp_http_log)
+    set_target_properties(opentelemetry_exporter_otlp_http_log
+                          PROPERTIES EXPORT_NAME otlp_http_log_record_exporter)
+    set_target_version(opentelemetry_exporter_otlp_http_log)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_log
-    PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
-           opentelemetry_exporter_otlp_http_client
-           opentelemetry_exporter_otlp_http_options)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_log
+      PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
+             opentelemetry_exporter_otlp_http_client
+             opentelemetry_exporter_otlp_http_options)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
-       opentelemetry_exporter_otlp_http_log)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+         opentelemetry_exporter_otlp_http_log)
 
-  #
-  # opentelemetry_exporter_otlp_http_log_builder
-  #
+    #
+    # opentelemetry_exporter_otlp_http_log_builder
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_log_builder
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_log_record_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http_log_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+      src/otlp_http_log_record_builder.cc)
 
-  set_target_properties(
-    opentelemetry_exporter_otlp_http_log_builder
-    PROPERTIES EXPORT_NAME otlp_http_log_record_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_http_log_builder)
+    set_target_properties(
+      opentelemetry_exporter_otlp_http_log_builder
+      PROPERTIES EXPORT_NAME otlp_http_log_record_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_http_log_builder)
 
-  target_include_directories(
-    opentelemetry_exporter_otlp_http_log_builder
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-           "$<INSTALL_INTERFACE:include>")
+    target_include_directories(
+      opentelemetry_exporter_otlp_http_log_builder
+      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+             "$<INSTALL_INTERFACE:include>")
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_log_builder
-    PUBLIC opentelemetry_configuration_core opentelemetry_logs
-    PRIVATE opentelemetry_exporter_otlp_http_log
-            opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_log_builder
+      PUBLIC opentelemetry_configuration_core opentelemetry_logs
+      PRIVATE opentelemetry_exporter_otlp_http_log
+              opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_http_log_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_http_log_builder)
 
-  #
-  # opentelemetry_exporter_otlp_http_metric
-  #
+    #
+    # opentelemetry_exporter_otlp_http_metric
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_metric
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_metric_exporter.cc
-    src/otlp_http_metric_exporter_factory.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http_metric
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_metric_exporter.cc
+      src/otlp_http_metric_exporter_factory.cc)
 
-  set_target_properties(opentelemetry_exporter_otlp_http_metric
-                        PROPERTIES EXPORT_NAME otlp_http_metric_exporter)
-  set_target_version(opentelemetry_exporter_otlp_http_metric)
+    set_target_properties(opentelemetry_exporter_otlp_http_metric
+                          PROPERTIES EXPORT_NAME otlp_http_metric_exporter)
+    set_target_version(opentelemetry_exporter_otlp_http_metric)
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_metric
-    PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
-           opentelemetry_exporter_otlp_http_client
-           opentelemetry_exporter_otlp_http_options)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_metric
+      PUBLIC opentelemetry_otlp_common opentelemetry_otlp_recordable
+             opentelemetry_exporter_otlp_http_client
+             opentelemetry_exporter_otlp_http_options)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
-       opentelemetry_exporter_otlp_http_metric)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_TARGETS
+         opentelemetry_exporter_otlp_http_metric)
 
-  #
-  # opentelemetry_exporter_otlp_http_metric_builder
-  #
+    #
+    # opentelemetry_exporter_otlp_http_metric_builder
+    #
 
-  add_library(
-    opentelemetry_exporter_otlp_http_metric_builder
-    ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE} src/otlp_http_push_metric_builder.cc)
+    add_library(
+      opentelemetry_exporter_otlp_http_metric_builder
+      ${OPENTELEMETRY_OTLP_TARGETS_LIB_TYPE}
+      src/otlp_http_push_metric_builder.cc)
 
-  set_target_properties(
-    opentelemetry_exporter_otlp_http_metric_builder
-    PROPERTIES EXPORT_NAME otlp_http_metric_exporter_builder)
-  set_target_version(opentelemetry_exporter_otlp_http_metric_builder)
+    set_target_properties(
+      opentelemetry_exporter_otlp_http_metric_builder
+      PROPERTIES EXPORT_NAME otlp_http_metric_exporter_builder)
+    set_target_version(opentelemetry_exporter_otlp_http_metric_builder)
 
-  target_include_directories(
-    opentelemetry_exporter_otlp_http_metric_builder
-    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-           "$<INSTALL_INTERFACE:include>")
+    target_include_directories(
+      opentelemetry_exporter_otlp_http_metric_builder
+      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+             "$<INSTALL_INTERFACE:include>")
 
-  target_link_libraries(
-    opentelemetry_exporter_otlp_http_metric_builder
-    PUBLIC opentelemetry_configuration_core opentelemetry_metrics
-    PRIVATE opentelemetry_exporter_otlp_http_metric
-            opentelemetry_exporter_otlp_builder_utils)
+    target_link_libraries(
+      opentelemetry_exporter_otlp_http_metric_builder
+      PUBLIC opentelemetry_configuration_core opentelemetry_metrics
+      PRIVATE opentelemetry_exporter_otlp_http_metric
+              opentelemetry_exporter_otlp_builder_utils)
 
-  list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
-       opentelemetry_exporter_otlp_http_metric_builder)
+    list(APPEND OPENTELEMETRY_OTLP_HTTP_BUILDER_TARGETS
+         opentelemetry_exporter_otlp_http_metric_builder)
 
   endif() # OTELCPP_WITH_OTLP_HTTP_PROTOBUF
 
@@ -1085,8 +1105,8 @@ if(OTELCPP_WITH_OTLP_HTTP)
       )
     endif()
 
-    # Both of these are required by the packages below, so they need packages of their own
-    # for pkg-config to resolve the chain at all.
+    # Both of these are required by the packages below, so they need packages of
+    # their own for pkg-config to resolve the chain at all.
     opentelemetry_add_pkgconfig(
       exporter_otlp_http_options
       "OpenTelemetry OTLP - HTTP Exporter Options"
@@ -1094,8 +1114,7 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "opentelemetry_otlp_common opentelemetry_common")
 
     opentelemetry_add_pkgconfig(
-      exporter_otlp_http_transport
-      "OpenTelemetry OTLP - HTTP Transport"
+      exporter_otlp_http_transport "OpenTelemetry OTLP - HTTP Transport"
       "The protobuf-free OTLP/HTTP send path."
       "opentelemetry_api opentelemetry_exporter_otlp_http_options")
 
@@ -1376,7 +1395,8 @@ if(OTELCPP_WITH_OTLP_FILE)
 endif()
 
 set(OPENTELEMETRY_OTLP_EXPORTERS_COMMON_TARGETS
-    opentelemetry_otlp_common opentelemetry_exporter_otlp_builder_utils
+    opentelemetry_otlp_common
+    opentelemetry_exporter_otlp_builder_utils
     opentelemetry_exporter_otlp_json_mapping
     ${OPENTELEMETRY_OTLP_JSON_WRITER_TARGETS}
     ${OPENTELEMETRY_OTLP_JSON_READER_TARGETS}
@@ -1601,9 +1621,8 @@ if(OTELCPP_BUILD_TESTING)
       TEST_PREFIX exporter.otlp.
       TEST_LIST otlp_json_writer_nlohmann_test)
 
-    add_executable(
-      otlp_json_reader_test test/otlp_json_reader_test.cc
-                            test/otlp_json_reader_contract_test.cc)
+    add_executable(otlp_json_reader_test test/otlp_json_reader_test.cc
+                                         test/otlp_json_reader_contract_test.cc)
     target_link_libraries(
       otlp_json_reader_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
       opentelemetry_exporter_otlp_json_reader)
@@ -1615,9 +1634,12 @@ if(OTELCPP_BUILD_TESTING)
     add_executable(otlp_json_partial_success_test
                    test/otlp_json_partial_success_test.cc)
     target_link_libraries(
-      otlp_json_partial_success_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_exporter_otlp_json_partial_success
-      opentelemetry_sdk opentelemetry_test_common)
+      otlp_json_partial_success_test
+      ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT}
+      opentelemetry_exporter_otlp_json_partial_success
+      opentelemetry_sdk
+      opentelemetry_test_common)
     gtest_add_tests(
       TARGET otlp_json_partial_success_test
       TEST_PREFIX exporter.otlp.
@@ -1709,8 +1731,8 @@ if(OTELCPP_BUILD_TESTING)
   endif()
 
   if(OTELCPP_WITH_OTLP_HTTP)
-    # Only built for the protobuf exporter; the OTLP/JSON exporter has its
-    # own tests below.
+    # Only built for the protobuf exporter; the OTLP/JSON exporter has its own
+    # tests below.
     if(OTELCPP_WITH_JSON_WRITER_NLOHMANN AND OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
       add_executable(otlp_http_exporter_test test/otlp_http_exporter_test.cc)
       target_link_libraries(
@@ -1732,11 +1754,12 @@ if(OTELCPP_BUILD_TESTING)
         TEST_LIST otlp_http_exporter_test)
     endif()
 
-    # Links the OTLP/JSON exporters and the no-send client and nothing else:
-    # the target list is what proves these exporters need no protobuf, so do
-    # not add protobuf::libprotobuf here to fix a link error.
+    # Links the OTLP/JSON exporters and the no-send client and nothing else: the
+    # target list is what proves these exporters need no protobuf, so do not add
+    # protobuf::libprotobuf here to fix a link error.
     if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
-      add_executable(otlp_json_http_builder_test test/otlp_json_http_builder_test.cc)
+      add_executable(otlp_json_http_builder_test
+                     test/otlp_json_http_builder_test.cc)
       target_link_libraries(
         otlp_json_http_builder_test
         ${GTEST_BOTH_LIBRARIES}
@@ -1753,8 +1776,10 @@ if(OTELCPP_BUILD_TESTING)
 
       # test name -> the single-signal library it exercises
       set(_json_http_tests
-          otlp_json_http_exporter_test opentelemetry_exporter_otlp_json_http
-          otlp_json_http_exporter_factory_test opentelemetry_exporter_otlp_json_http
+          otlp_json_http_exporter_test
+          opentelemetry_exporter_otlp_json_http
+          otlp_json_http_exporter_factory_test
+          opentelemetry_exporter_otlp_json_http
           otlp_json_http_log_record_exporter_test
           opentelemetry_exporter_otlp_json_http_log
           otlp_json_http_log_record_exporter_factory_test
@@ -1773,8 +1798,12 @@ if(OTELCPP_BUILD_TESTING)
 
         add_executable(${_json_http_test} test/${_json_http_test}.cc)
         target_link_libraries(
-          ${_json_http_test} ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-          ${GMOCK_LIB} ${_json_http_lib} opentelemetry_http_client_nosend
+          ${_json_http_test}
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          ${GMOCK_LIB}
+          ${_json_http_lib}
+          opentelemetry_http_client_nosend
           opentelemetry_test_common)
         if(WIN32)
           target_link_libraries(${_json_http_test} ws2_32)
@@ -1791,9 +1820,13 @@ if(OTELCPP_BUILD_TESTING)
     # protobuf::libprotobuf here to fix a link error -- fix the split instead.
     add_executable(otlp_http_transport_test test/otlp_http_transport_test.cc)
     target_link_libraries(
-      otlp_http_transport_test ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-      ${GMOCK_LIB} opentelemetry_exporter_otlp_http_transport
-      opentelemetry_http_client_nosend opentelemetry_test_common)
+      otlp_http_transport_test
+      ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT}
+      ${GMOCK_LIB}
+      opentelemetry_exporter_otlp_http_transport
+      opentelemetry_http_client_nosend
+      opentelemetry_test_common)
     if(WIN32)
       target_link_libraries(otlp_http_transport_test ws2_32)
     endif()
@@ -1806,160 +1839,164 @@ if(OTELCPP_BUILD_TESTING)
     # them; the OTLP/JSON exporter tests above stand on their own.
     if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
 
-    add_executable(otlp_http_exporter_factory_test
-                   test/otlp_http_exporter_factory_test.cc)
-    target_link_libraries(
-      otlp_http_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB} opentelemetry_exporter_otlp_http)
-    gtest_add_tests(
-      TARGET otlp_http_exporter_factory_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_exporter_factory_test)
-
-    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
-      add_executable(otlp_http_log_record_exporter_test
-                     test/otlp_http_log_record_exporter_test.cc)
+      add_executable(otlp_http_exporter_factory_test
+                     test/otlp_http_exporter_factory_test.cc)
       target_link_libraries(
-        otlp_http_log_record_exporter_test
-        ${GTEST_BOTH_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${GMOCK_LIB}
-        opentelemetry_exporter_otlp_http_log
-        opentelemetry_logs
-        opentelemetry_http_client_nosend
-        nlohmann_json::nlohmann_json
-        opentelemetry_test_common)
-      if(WIN32)
-        target_link_libraries(otlp_http_log_record_exporter_test ws2_32)
+        otlp_http_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB} opentelemetry_exporter_otlp_http)
+      gtest_add_tests(
+        TARGET otlp_http_exporter_factory_test
+        TEST_PREFIX exporter.otlp.
+        TEST_LIST otlp_http_exporter_factory_test)
+
+      if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+        add_executable(otlp_http_log_record_exporter_test
+                       test/otlp_http_log_record_exporter_test.cc)
+        target_link_libraries(
+          otlp_http_log_record_exporter_test
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          ${GMOCK_LIB}
+          opentelemetry_exporter_otlp_http_log
+          opentelemetry_logs
+          opentelemetry_http_client_nosend
+          nlohmann_json::nlohmann_json
+          opentelemetry_test_common)
+        if(WIN32)
+          target_link_libraries(otlp_http_log_record_exporter_test ws2_32)
+        endif()
+        gtest_add_tests(
+          TARGET otlp_http_log_record_exporter_test
+          TEST_PREFIX exporter.otlp.
+          TEST_LIST otlp_http_log_record_exporter_test)
       endif()
-      gtest_add_tests(
-        TARGET otlp_http_log_record_exporter_test
-        TEST_PREFIX exporter.otlp.
-        TEST_LIST otlp_http_log_record_exporter_test)
-    endif()
 
-    add_executable(otlp_http_log_record_exporter_factory_test
-                   test/otlp_http_log_record_exporter_factory_test.cc)
-    target_link_libraries(
-      otlp_http_log_record_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB}
-      opentelemetry_exporter_otlp_http_log opentelemetry_logs)
-    gtest_add_tests(
-      TARGET otlp_http_log_record_exporter_factory_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_log_record_exporter_factory_test)
-
-    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
-      add_executable(otlp_http_metric_exporter_test
-                     test/otlp_http_metric_exporter_test.cc)
+      add_executable(otlp_http_log_record_exporter_factory_test
+                     test/otlp_http_log_record_exporter_factory_test.cc)
       target_link_libraries(
-        otlp_http_metric_exporter_test
-        ${GTEST_BOTH_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${GMOCK_LIB}
-        opentelemetry_exporter_otlp_http_metric
-        opentelemetry_metrics
-        opentelemetry_http_client_nosend
-        nlohmann_json::nlohmann_json
-        protobuf::libprotobuf
-        opentelemetry_test_common)
+        otlp_http_log_record_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB}
+        opentelemetry_exporter_otlp_http_log opentelemetry_logs)
       gtest_add_tests(
-        TARGET otlp_http_metric_exporter_test
+        TARGET otlp_http_log_record_exporter_factory_test
         TEST_PREFIX exporter.otlp.
-        TEST_LIST otlp_http_metric_exporter_test)
-    endif()
+        TEST_LIST otlp_http_log_record_exporter_factory_test)
 
-    add_executable(otlp_http_metric_exporter_factory_test
-                   test/otlp_http_metric_exporter_factory_test.cc)
-    target_link_libraries(
-      otlp_http_metric_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB}
-      opentelemetry_exporter_otlp_http_metric opentelemetry_metrics)
-    gtest_add_tests(
-      TARGET otlp_http_metric_exporter_factory_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_metric_exporter_factory_test)
+      if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+        add_executable(otlp_http_metric_exporter_test
+                       test/otlp_http_metric_exporter_test.cc)
+        target_link_libraries(
+          otlp_http_metric_exporter_test
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          ${GMOCK_LIB}
+          opentelemetry_exporter_otlp_http_metric
+          opentelemetry_metrics
+          opentelemetry_http_client_nosend
+          nlohmann_json::nlohmann_json
+          protobuf::libprotobuf
+          opentelemetry_test_common)
+        gtest_add_tests(
+          TARGET otlp_http_metric_exporter_test
+          TEST_PREFIX exporter.otlp.
+          TEST_LIST otlp_http_metric_exporter_test)
+      endif()
 
-    add_executable(otlp_http_exporter_custom_client_test
-                   test/otlp_http_exporter_custom_client_test.cc)
-    target_link_libraries(
-      otlp_http_exporter_custom_client_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB} opentelemetry_exporter_otlp_http
-      opentelemetry_http_client_nosend)
-    gtest_add_tests(
-      TARGET otlp_http_exporter_custom_client_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_exporter_custom_client_test)
-
-    add_executable(otlp_http_metric_exporter_custom_client_test
-                   test/otlp_http_metric_exporter_custom_client_test.cc)
-    target_link_libraries(
-      otlp_http_metric_exporter_custom_client_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_exporter_otlp_http_metric
-      opentelemetry_metrics opentelemetry_http_client_nosend)
-    gtest_add_tests(
-      TARGET otlp_http_metric_exporter_custom_client_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_metric_exporter_custom_client_test)
-
-    add_executable(otlp_http_log_record_exporter_custom_client_test
-                   test/otlp_http_log_record_exporter_custom_client_test.cc)
-    target_link_libraries(
-      otlp_http_log_record_exporter_custom_client_test ${GTEST_BOTH_LIBRARIES}
-      ${CMAKE_THREAD_LIBS_INIT} opentelemetry_exporter_otlp_http_log
-      opentelemetry_logs opentelemetry_http_client_nosend)
-    gtest_add_tests(
-      TARGET otlp_http_log_record_exporter_custom_client_test
-      TEST_PREFIX exporter.otlp.
-      TEST_LIST otlp_http_log_record_exporter_custom_client_test)
-
-    if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
-      add_executable(otlp_http_exporter_custom_json_writer_test
-                     test/otlp_http_exporter_custom_json_writer_test.cc)
+      add_executable(otlp_http_metric_exporter_factory_test
+                     test/otlp_http_metric_exporter_factory_test.cc)
       target_link_libraries(
-        otlp_http_exporter_custom_json_writer_test
-        ${GTEST_BOTH_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${GMOCK_LIB}
-        opentelemetry_exporter_otlp_http
-        opentelemetry_http_client_nosend
-        opentelemetry_exporter_otlp_json_writer)
+        otlp_http_metric_exporter_factory_test ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB}
+        opentelemetry_exporter_otlp_http_metric opentelemetry_metrics)
       gtest_add_tests(
-        TARGET otlp_http_exporter_custom_json_writer_test
+        TARGET otlp_http_metric_exporter_factory_test
         TEST_PREFIX exporter.otlp.
-        TEST_LIST otlp_http_exporter_custom_json_writer_test)
+        TEST_LIST otlp_http_metric_exporter_factory_test)
 
-      add_executable(otlp_http_metric_exporter_custom_json_writer_test
-                     test/otlp_http_metric_exporter_custom_json_writer_test.cc)
+      add_executable(otlp_http_exporter_custom_client_test
+                     test/otlp_http_exporter_custom_client_test.cc)
       target_link_libraries(
-        otlp_http_metric_exporter_custom_json_writer_test
-        ${GTEST_BOTH_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT}
-        opentelemetry_exporter_otlp_http_metric
-        opentelemetry_metrics
-        opentelemetry_http_client_nosend
-        opentelemetry_exporter_otlp_json_writer)
+        otlp_http_exporter_custom_client_test ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT} ${GMOCK_LIB} opentelemetry_exporter_otlp_http
+        opentelemetry_http_client_nosend)
       gtest_add_tests(
-        TARGET otlp_http_metric_exporter_custom_json_writer_test
+        TARGET otlp_http_exporter_custom_client_test
         TEST_PREFIX exporter.otlp.
-        TEST_LIST otlp_http_metric_exporter_custom_json_writer_test)
+        TEST_LIST otlp_http_exporter_custom_client_test)
 
-      add_executable(
-        otlp_http_log_record_exporter_custom_json_writer_test
-        test/otlp_http_log_record_exporter_custom_json_writer_test.cc)
+      add_executable(otlp_http_metric_exporter_custom_client_test
+                     test/otlp_http_metric_exporter_custom_client_test.cc)
       target_link_libraries(
-        otlp_http_log_record_exporter_custom_json_writer_test
+        otlp_http_metric_exporter_custom_client_test ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT} opentelemetry_exporter_otlp_http_metric
+        opentelemetry_metrics opentelemetry_http_client_nosend)
+      gtest_add_tests(
+        TARGET otlp_http_metric_exporter_custom_client_test
+        TEST_PREFIX exporter.otlp.
+        TEST_LIST otlp_http_metric_exporter_custom_client_test)
+
+      add_executable(otlp_http_log_record_exporter_custom_client_test
+                     test/otlp_http_log_record_exporter_custom_client_test.cc)
+      target_link_libraries(
+        otlp_http_log_record_exporter_custom_client_test
         ${GTEST_BOTH_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
         opentelemetry_exporter_otlp_http_log
         opentelemetry_logs
-        opentelemetry_http_client_nosend
-        opentelemetry_exporter_otlp_json_writer)
+        opentelemetry_http_client_nosend)
       gtest_add_tests(
-        TARGET otlp_http_log_record_exporter_custom_json_writer_test
+        TARGET otlp_http_log_record_exporter_custom_client_test
         TEST_PREFIX exporter.otlp.
-        TEST_LIST otlp_http_log_record_exporter_custom_json_writer_test)
-    endif()
+        TEST_LIST otlp_http_log_record_exporter_custom_client_test)
+
+      if(OTELCPP_WITH_JSON_WRITER_NLOHMANN)
+        add_executable(otlp_http_exporter_custom_json_writer_test
+                       test/otlp_http_exporter_custom_json_writer_test.cc)
+        target_link_libraries(
+          otlp_http_exporter_custom_json_writer_test
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          ${GMOCK_LIB}
+          opentelemetry_exporter_otlp_http
+          opentelemetry_http_client_nosend
+          opentelemetry_exporter_otlp_json_writer)
+        gtest_add_tests(
+          TARGET otlp_http_exporter_custom_json_writer_test
+          TEST_PREFIX exporter.otlp.
+          TEST_LIST otlp_http_exporter_custom_json_writer_test)
+
+        add_executable(
+          otlp_http_metric_exporter_custom_json_writer_test
+          test/otlp_http_metric_exporter_custom_json_writer_test.cc)
+        target_link_libraries(
+          otlp_http_metric_exporter_custom_json_writer_test
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          opentelemetry_exporter_otlp_http_metric
+          opentelemetry_metrics
+          opentelemetry_http_client_nosend
+          opentelemetry_exporter_otlp_json_writer)
+        gtest_add_tests(
+          TARGET otlp_http_metric_exporter_custom_json_writer_test
+          TEST_PREFIX exporter.otlp.
+          TEST_LIST otlp_http_metric_exporter_custom_json_writer_test)
+
+        add_executable(
+          otlp_http_log_record_exporter_custom_json_writer_test
+          test/otlp_http_log_record_exporter_custom_json_writer_test.cc)
+        target_link_libraries(
+          otlp_http_log_record_exporter_custom_json_writer_test
+          ${GTEST_BOTH_LIBRARIES}
+          ${CMAKE_THREAD_LIBS_INIT}
+          opentelemetry_exporter_otlp_http_log
+          opentelemetry_logs
+          opentelemetry_http_client_nosend
+          opentelemetry_exporter_otlp_json_writer)
+        gtest_add_tests(
+          TARGET otlp_http_log_record_exporter_custom_json_writer_test
+          TEST_PREFIX exporter.otlp.
+          TEST_LIST otlp_http_log_record_exporter_custom_json_writer_test)
+      endif()
 
     endif() # OTELCPP_WITH_OTLP_HTTP_PROTOBUF
   endif()
@@ -2116,8 +2153,8 @@ if(OTELCPP_BUILD_TESTING
             ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-# Compares the two OTLP/JSON trace paths, so it needs a writer backend to produce bytes
-# with and the protobuf path to compare against.
+# Compares the two OTLP/JSON trace paths, so it needs a writer backend to
+# produce bytes with and the protobuf path to compare against.
 if(OTELCPP_BUILD_TESTING
    AND OTELCPP_WITH_BENCHMARK
    AND OTELCPP_WITH_JSON_WRITER_NLOHMANN
@@ -2149,7 +2186,9 @@ if(OTELCPP_BUILD_TESTING
             ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-if(OTELCPP_BUILD_TESTING AND OTELCPP_WITH_BENCHMARK AND OTELCPP_OTLP_PROTOBUF_REQUIRED)
+if(OTELCPP_BUILD_TESTING
+   AND OTELCPP_WITH_BENCHMARK
+   AND OTELCPP_OTLP_PROTOBUF_REQUIRED)
   add_executable(otlp_recordable_benchmark test/otlp_recordable_benchmark.cc)
 
   target_link_libraries(

@@ -18,9 +18,11 @@
 #include <opentelemetry/exporters/otlp/otlp_json_http_log_record_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_json_http_metric_exporter_factory.h>
 
-#include <opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h>
-#include <opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h>
-#include <opentelemetry/exporters/otlp/otlp_json_http_span_builder.h>
+#ifdef ENABLE_JSON_WRITER_NLOHMANN
+#  include <opentelemetry/exporters/otlp/otlp_json_http_log_record_builder.h>
+#  include <opentelemetry/exporters/otlp/otlp_json_http_push_metric_builder.h>
+#  include <opentelemetry/exporters/otlp/otlp_json_http_span_builder.h>
+#endif
 
 #include <opentelemetry/exporters/otlp/otlp_http_log_record_builder.h>
 #include <opentelemetry/exporters/otlp/otlp_http_push_metric_builder.h>
@@ -47,6 +49,9 @@ TEST(ExportersOtlpHttpInstall, OtlpHttpMetricExporter)
   ASSERT_TRUE(exporter != nullptr);
 }
 
+// These ask for encoding: json, and a configuration file cannot supply a
+// JsonWriterFactory, so they need the default backend to be compiled in.
+#ifdef ENABLE_JSON_WRITER_NLOHMANN
 TEST(ExportersOtlpHttpBuilderInstall, OtlpHttpSpanBuilder)
 {
   auto builder = std::make_unique<opentelemetry::exporter::otlp::OtlpHttpSpanBuilder>();
@@ -93,6 +98,7 @@ TEST(ExportersOtlpHttpBuilderInstall, OtlpHttpLogRecordBuilder)
   auto exporter = builder->Build(&model);
   ASSERT_TRUE(exporter != nullptr);
 }
+#endif
 
 TEST(ExportersOtlpHttpBuilderInstall, OtlpHttpBuilderUtilsConvertOtlpHttpEncoding)
 {
@@ -104,6 +110,12 @@ TEST(ExportersOtlpHttpBuilderInstall, OtlpHttpBuilderUtilsConvertOtlpHttpEncodin
             HttpRequestContentType::kJson);
   EXPECT_EQ(OtlpHttpBuilderUtils::ConvertOtlpHttpEncoding(OtlpHttpEncoding::protobuf),
             HttpRequestContentType::kBinary);
+}
+
+// The factory-less overloads resolve the default backends. An install without one is
+// usable only through the constructors that take both factories, which the unit tests
+// cover; what is checkable here is that the exported targets link.
+#ifdef ENABLE_JSON_WRITER_NLOHMANN
 TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpExporter)
 {
   auto options  = opentelemetry::exporter::otlp::OtlpHttpExporterOptions();
@@ -121,12 +133,13 @@ TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpLogRecordExporter)
 
 TEST(ExportersOtlpJsonHttpInstall, OtlpJsonHttpMetricExporter)
 {
-  auto options = opentelemetry::exporter::otlp::OtlpHttpMetricExporterOptions();
-  auto exporter =
-      opentelemetry::exporter::otlp::OtlpJsonHttpMetricExporterFactory::Create(options);
+  auto options  = opentelemetry::exporter::otlp::OtlpHttpMetricExporterOptions();
+  auto exporter = opentelemetry::exporter::otlp::OtlpJsonHttpMetricExporterFactory::Create(options);
   ASSERT_TRUE(exporter != nullptr);
 }
+#endif
 
+#ifdef ENABLE_JSON_WRITER_NLOHMANN
 TEST(ExportersOtlpJsonHttpBuilderInstall, OtlpJsonHttpSpanBuilder)
 {
   auto builder = std::make_unique<opentelemetry::exporter::otlp::OtlpJsonHttpSpanBuilder>();
@@ -173,3 +186,4 @@ TEST(ExportersOtlpJsonHttpBuilderInstall, OtlpJsonHttpLogRecordBuilder)
   auto exporter = builder->Build(&model);
   ASSERT_TRUE(exporter != nullptr);
 }
+#endif
