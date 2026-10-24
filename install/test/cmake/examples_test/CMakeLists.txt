@@ -32,6 +32,17 @@ endif()
 
 if("exporters_otlp_http" IN_LIST OPENTELEMETRY_CPP_COMPONENTS_INSTALLED)
   set(OTELCPP_WITH_OTLP_HTTP ON)
+
+  # The component ships whichever of the two exporter families the install was
+  # built with, and the package config exports no option to tell them apart, so
+  # the installed targets answer for the options the examples gate on.
+  if(TARGET opentelemetry-cpp::otlp_http_exporter)
+    set(OTELCPP_WITH_OTLP_HTTP_PROTOBUF ON)
+  endif()
+endif()
+
+if(TARGET opentelemetry-cpp::otlp_json_writer_nlohmann)
+  set(OTELCPP_WITH_JSON_WRITER_NLOHMANN ON)
 endif()
 
 if("exporters_prometheus" IN_LIST OPENTELEMETRY_CPP_COMPONENTS_INSTALLED)
