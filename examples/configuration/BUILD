@@ -15,11 +15,15 @@ cc_test(
     data = ["kitchen-sink.yaml"],
     defines = [
         "OTEL_HAVE_OTLP_HTTP",
+        "OTEL_HAVE_OTLP_HTTP_PROTOBUF_BUILDERS",
         "OTEL_HAVE_OTLP_GRPC",
         "OTEL_HAVE_OTLP_FILE",
         "OTEL_HAVE_PROMETHEUS",
         "OTEL_HAVE_RESOURCE_DETECTORS",
-    ],
+    ] + select({
+        "//exporters/otlp:json_writer_nlohmann_enabled": ["OTEL_HAVE_OTLP_HTTP_JSON_BUILDERS"],
+        "//conditions:default": [],
+    }),
     tags = [
         "test",
         "yaml",
@@ -40,9 +44,6 @@ cc_test(
         "//exporters/otlp:otlp_http_log_record_exporter_builder",
         "//exporters/otlp:otlp_http_metric_exporter_builder",
         "//exporters/otlp:otlp_http_span_exporter_builder",
-        "//exporters/otlp:otlp_json_http_log_record_exporter_builder",
-        "//exporters/otlp:otlp_json_http_metric_exporter_builder",
-        "//exporters/otlp:otlp_json_http_span_exporter_builder",
         "//exporters/prometheus:prometheus_exporter_builder",
         "//resource_detectors:resource_detectors_builders",
         "//sdk:headers",
@@ -50,7 +51,14 @@ cc_test(
         "//sdk/src/logs",
         "//sdk/src/metrics",
         "//sdk/src/trace",
-    ],
+    ] + select({
+        "//exporters/otlp:json_writer_nlohmann_enabled": [
+            "//exporters/otlp:otlp_json_http_log_record_exporter_builder",
+            "//exporters/otlp:otlp_json_http_metric_exporter_builder",
+            "//exporters/otlp:otlp_json_http_span_exporter_builder",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_test(
