@@ -237,6 +237,7 @@ cc_library(
         "src/otlp_builder_utils.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_http_builder_options.h",
         "include/opentelemetry/exporters/otlp/otlp_builder_utils.h",
     ],
     strip_include_prefix = "include",
