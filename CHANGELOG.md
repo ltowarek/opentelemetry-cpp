@@ -66,11 +66,12 @@ Increment the:
   protobuf-free OTLP/JSON builders. Consumers relying on it to supply
   `opentelemetry_otlp_recordable` transitively must now link that themselves.
 
-* [EXPORTER] The protobuf-free OTLP/JSON exporters now take their `JsonWriter` and
-  `JsonReader` backends from `json_writer_factory` / `json_reader_factory` on the HTTP
-  exporter runtime options, the way the protobuf OTLP/HTTP exporter already does, and fail
-  an export when a factory returns null or the writer fails in `ToString()` instead of
-  dereferencing null or sending an empty body. `json_reader_factory` is new on the three
+* [EXPORTER] The protobuf-free OTLP/JSON exporters now take their
+  `JsonWriter` and `JsonReader` backends from `json_writer_factory` /
+  `json_reader_factory` on the HTTP exporter runtime options, the way the
+  protobuf OTLP/HTTP exporter already does, and fail an export when a factory
+  returns null or the writer fails in `ToString()` instead of dereferencing
+  null or sending an empty body. `json_reader_factory` is new on the three
   `OtlpHttp*ExporterRuntimeOptions`; only the OTLP/JSON exporters read it.
 
 * [EXPORTER] Add a protobuf-free mapping from SDK spans to OTLP/JSON:
