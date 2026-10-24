@@ -7,8 +7,12 @@
 #include <memory>
 #include <utility>
 
+#include "opentelemetry/exporters/otlp/detail/default_json_reader_factory.h"
+#include "opentelemetry/exporters/otlp/detail/default_json_writer_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_http.h"
 #include "opentelemetry/exporters/otlp/otlp_http_client.h"
+#include "opentelemetry/exporters/otlp/otlp_json_reader_factory.h"
+#include "opentelemetry/exporters/otlp/otlp_json_writer_factory.h"
 #include "opentelemetry/sdk/common/thread_instrumentation.h"
 #include "opentelemetry/version.h"
 
@@ -51,6 +55,24 @@ OtlpHttpClientOptions MakeOtlpJsonHttpClientOptions(const ExporterOptions &optio
 #endif
   );
   return client_options;
+}
+
+/**
+ * A null factory means "use the compiled-in default" wherever one can be
+ * supplied: on the runtime options, which default to empty, and on the
+ * constructor overload that takes factories directly, which would otherwise
+ * store a null and dereference it on export.
+ */
+inline std::shared_ptr<JsonWriterFactory> ResolveJsonWriterFactoryOrDefault(
+    const std::shared_ptr<JsonWriterFactory> &json_writer_factory) noexcept
+{
+  return json_writer_factory ? json_writer_factory : GetDefaultJsonWriterFactory();
+}
+
+inline std::shared_ptr<JsonReaderFactory> ResolveJsonReaderFactoryOrDefault(
+    const std::shared_ptr<JsonReaderFactory> &json_reader_factory) noexcept
+{
+  return json_reader_factory ? json_reader_factory : GetDefaultJsonReaderFactory();
 }
 
 /**

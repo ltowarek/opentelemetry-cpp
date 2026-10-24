@@ -10,8 +10,6 @@
 #include <string>
 #include <utility>
 
-#include "opentelemetry/exporters/otlp/detail/default_json_reader_factory.h"
-#include "opentelemetry/exporters/otlp/detail/default_json_writer_factory.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_aggregation_temporality.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_http_transport.h"
 #include "opentelemetry/exporters/otlp/detail/otlp_json_http_client_options.h"
@@ -36,26 +34,6 @@ namespace exporter
 namespace otlp
 {
 
-namespace
-{
-
-// A null factory means "use the compiled-in default" wherever one can be supplied: on the
-// runtime options, which default to empty, and on the constructor overload that takes
-// factories directly, which would otherwise store a null and dereference it on export.
-std::shared_ptr<JsonWriterFactory> ResolveJsonWriterFactory(
-    const std::shared_ptr<JsonWriterFactory> &json_writer_factory) noexcept
-{
-  return json_writer_factory ? json_writer_factory : detail::GetDefaultJsonWriterFactory();
-}
-
-std::shared_ptr<JsonReaderFactory> ResolveJsonReaderFactory(
-    const std::shared_ptr<JsonReaderFactory> &json_reader_factory) noexcept
-{
-  return json_reader_factory ? json_reader_factory : detail::GetDefaultJsonReaderFactory();
-}
-
-}  // namespace
-
 OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter()
     : OtlpJsonHttpMetricExporter(OtlpHttpMetricExporterOptions())
 {}
@@ -77,11 +55,12 @@ OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
     const OtlpHttpMetricExporterOptions &options,
     const OtlpHttpMetricExporterRuntimeOptions &runtime_options,
     std::shared_ptr<ext::http::client::HttpClient> http_client)
-    : OtlpJsonHttpMetricExporter(options,
-                                 runtime_options,
-                                 std::move(http_client),
-                                 ResolveJsonWriterFactory(runtime_options.json_writer_factory),
-                                 ResolveJsonReaderFactory(runtime_options.json_reader_factory))
+    : OtlpJsonHttpMetricExporter(
+          options,
+          runtime_options,
+          std::move(http_client),
+          detail::ResolveJsonWriterFactoryOrDefault(runtime_options.json_writer_factory),
+          detail::ResolveJsonReaderFactoryOrDefault(runtime_options.json_reader_factory))
 {}
 
 OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
@@ -94,8 +73,8 @@ OtlpJsonHttpMetricExporter::OtlpJsonHttpMetricExporter(
       transport_(std::make_unique<detail::OtlpHttpTransport>(
           detail::MakeOtlpJsonHttpClientOptions(options, runtime_options),
           std::move(http_client))),
-      json_writer_factory_(ResolveJsonWriterFactory(json_writer_factory)),
-      json_reader_factory_(ResolveJsonReaderFactory(json_reader_factory)),
+      json_writer_factory_(detail::ResolveJsonWriterFactoryOrDefault(json_writer_factory)),
+      json_reader_factory_(detail::ResolveJsonReaderFactoryOrDefault(json_reader_factory)),
       aggregation_temporality_selector_(
           detail::ChooseAggregationTemporalitySelector(options_.aggregation_temporality))
 {}
