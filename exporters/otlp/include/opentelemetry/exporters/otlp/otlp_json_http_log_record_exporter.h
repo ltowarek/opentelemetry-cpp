@@ -77,9 +77,9 @@ public:
    * Create an OtlpJsonHttpLogRecordExporter using the given options, runtime options, HTTP client
    * and JSON backends.
    *
-   * The one constructor that takes the JSON backends, so that a build with the bundled
-   * nlohmann backend excluded has a way in: every other constructor asks for the default,
-   * which such a build does not have.
+   * Takes the JSON backends explicitly, as the runtime options also do, so that a build
+   * with the bundled nlohmann backend excluded has a way in: the other constructors
+   * resolve the default, which such a build does not have.
    *
    * @param options the exporter options
    * @param runtime_options the runtime options (e.g. thread instrumentation)

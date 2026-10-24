@@ -65,8 +65,8 @@ SpanKindValue MapSpanKind(opentelemetry::trace::SpanKind span_kind) noexcept
 }
 
 // Status.StatusCode, which happens to agree with the SDK's StatusCode, but is
-// spelled out so a change on either side is a compile error rather than a
-// silently wrong number on the wire.
+// spelled out so an added enumerator trips -Wswitch rather than reaching the
+// wire as a silently wrong number.
 std::int32_t MapStatusCode(opentelemetry::trace::StatusCode code) noexcept
 {
   switch (code)
@@ -76,9 +76,9 @@ std::int32_t MapStatusCode(opentelemetry::trace::StatusCode code) noexcept
     case opentelemetry::trace::StatusCode::kError:
       return 2;
     case opentelemetry::trace::StatusCode::kUnset:
-    default:
       return 0;
   }
+  return 0;
 }
 
 /**
