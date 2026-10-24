@@ -1056,7 +1056,7 @@ if(OTELCPP_WITH_OTLP_HTTP)
   if(OTELCPP_INSTALL)
     if(OTELCPP_WITH_OTLP_HTTP_PROTOBUF)
       set(_otlp_http_client_pc_requires
-          "opentelemetry_api opentelemetry_exporter_otlp_json_writer opentelemetry_exporter_otlp_json_converter"
+          "opentelemetry_api opentelemetry_exporter_otlp_http_transport opentelemetry_exporter_otlp_json_writer opentelemetry_exporter_otlp_json_converter"
       )
       if(OTELCPP_WITH_HTTP_CLIENT_CURL)
         string(APPEND _otlp_http_client_pc_requires
