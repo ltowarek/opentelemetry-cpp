@@ -185,6 +185,7 @@ cc_library(
         "src/otlp_json_trace_mapping.cc",
     ],
     hdrs = [
+        "include/opentelemetry/exporters/otlp/detail/otlp_json_resource_grouping.h",
         "include/opentelemetry/exporters/otlp/otlp_json_log_mapping.h",
         "include/opentelemetry/exporters/otlp/otlp_json_log_recordable.h",
         "include/opentelemetry/exporters/otlp/otlp_json_mapping.h",

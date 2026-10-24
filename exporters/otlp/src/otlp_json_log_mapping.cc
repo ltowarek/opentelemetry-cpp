@@ -5,9 +5,9 @@
 
 #include <cstddef>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
+#include "opentelemetry/exporters/otlp/detail/otlp_json_resource_grouping.h"
 #include "opentelemetry/exporters/otlp/otlp_json_log_recordable.h"
 #include "opentelemetry/exporters/otlp/otlp_json_mapping.h"
 #include "opentelemetry/exporters/otlp/otlp_json_writer.h"
@@ -27,8 +27,6 @@ namespace otlp
 
 namespace
 {
-
-using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 
 // Whether the record has any field set at all. A record nothing was ever put
 // into -- which the SDK does emit, since a logger with no data still hands the
@@ -120,91 +118,8 @@ void WriteLogRecord(JsonWriter &writer, const OtlpJsonLogRecordable &record) noe
   writer.EndObject();
 }
 
-/**
- * The records of one batch, grouped the way OTLP nests them: by resource, then
- * by instrumentation scope within each resource. Both levels keep first-seen
- * order, which is the order the protobuf path appends them in.
- */
-struct ScopeGroup
-{
-  const InstrumentationScope *scope = nullptr;
-  std::vector<const OtlpJsonLogRecordable *> records;
-};
-
-struct ResourceGroup
-{
-  const opentelemetry::sdk::resource::Resource *resource = nullptr;
-  std::vector<ScopeGroup> scopes;
-};
-
-struct ScopePointerHasher
-{
-  std::size_t operator()(const InstrumentationScope *scope) const noexcept
-  {
-    return scope == nullptr ? 0 : scope->HashCode();
-  }
-};
-
-struct ScopePointerEqual
-{
-  bool operator()(const InstrumentationScope *left,
-                  const InstrumentationScope *right) const noexcept
-  {
-    if (left == right)
-    {
-      return true;
-    }
-    if (left == nullptr || right == nullptr)
-    {
-      return false;
-    }
-    return *left == *right;
-  }
-};
-
-std::vector<ResourceGroup> GroupLogs(
-    const opentelemetry::nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>>
-        &logs) noexcept
-{
-  std::vector<ResourceGroup> groups;
-  // Indices into `groups` and into each group's scopes, so lookup is by hash
-  // while the output order stays the order things were first seen.
-  std::unordered_map<const opentelemetry::sdk::resource::Resource *, std::size_t> resource_index;
-  std::vector<std::unordered_map<const InstrumentationScope *, std::size_t, ScopePointerHasher,
-                                 ScopePointerEqual>>
-      scope_index;
-
-  for (const auto &recordable : logs)
-  {
-    if (recordable == nullptr)
-    {
-      continue;
-    }
-    const auto *record = static_cast<const OtlpJsonLogRecordable *>(recordable.get());
-
-    const auto *resource = &record->GetResource();
-    auto resource_slot   = resource_index.find(resource);
-    if (resource_slot == resource_index.end())
-    {
-      resource_slot = resource_index.emplace(resource, groups.size()).first;
-      groups.push_back(ResourceGroup{resource, {}});
-      scope_index.emplace_back();
-    }
-    ResourceGroup &resource_group = groups[resource_slot->second];
-
-    const auto *scope = &record->GetInstrumentationScope();
-    auto &scopes      = scope_index[resource_slot->second];
-    auto scope_slot   = scopes.find(scope);
-    if (scope_slot == scopes.end())
-    {
-      scope_slot = scopes.emplace(scope, resource_group.scopes.size()).first;
-      resource_group.scopes.push_back(ScopeGroup{scope, {}});
-    }
-    resource_group.scopes[scope_slot->second].records.push_back(record);
-  }
-
-  return groups;
-}
+using ScopeGroup    = detail::ScopeGroup<OtlpJsonLogRecordable>;
+using ResourceGroup = detail::ResourceGroup<OtlpJsonLogRecordable>;
 
 }  // namespace
 
@@ -213,7 +128,8 @@ void ConvertLogsToJson(
     const opentelemetry::nostd::span<std::unique_ptr<opentelemetry::sdk::logs::Recordable>>
         &logs) noexcept
 {
-  const std::vector<ResourceGroup> groups = GroupLogs(logs);
+  const std::vector<ResourceGroup> groups =
+      detail::GroupByResourceAndScope<OtlpJsonLogRecordable>(logs);
 
   // An empty batch sets no field, and a message with no fields set is null.
   if (groups.empty())
@@ -242,11 +158,11 @@ void ConvertLogsToJson(
           writer.BeginObject();
           writer.Key("scope");
           json_mapping::WriteInstrumentationScope(writer, *scope_group.scope);
-          if (!scope_group.records.empty())
+          if (!scope_group.items.empty())
           {
             writer.Key("logRecords");
             writer.BeginArray();
-            for (const OtlpJsonLogRecordable *record : scope_group.records)
+            for (const OtlpJsonLogRecordable *record : scope_group.items)
             {
               WriteLogRecord(writer, *record);
             }

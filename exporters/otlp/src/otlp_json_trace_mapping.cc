@@ -7,9 +7,9 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "opentelemetry/exporters/otlp/detail/otlp_json_resource_grouping.h"
 #include "opentelemetry/exporters/otlp/otlp_json_mapping.h"
 #include "opentelemetry/exporters/otlp/otlp_json_span_recordable.h"
 #include "opentelemetry/exporters/otlp/otlp_json_writer.h"
@@ -30,8 +30,6 @@ namespace otlp
 
 namespace
 {
-
-using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 
 // The OTLP Span.SpanKind values. The SDK's SpanKind is a separate enumeration
 // whose order does not match, so the two are mapped rather than cast.
@@ -253,91 +251,8 @@ void WriteSpan(JsonWriter &writer, const OtlpJsonSpanRecordable &span) noexcept
   writer.EndObject();
 }
 
-/**
- * The spans of one batch, grouped the way OTLP nests them: by resource, then
- * by instrumentation scope within each resource. Both levels keep first-seen
- * order, which is the order the protobuf path appends them in.
- */
-struct ScopeGroup
-{
-  const InstrumentationScope *scope = nullptr;
-  std::vector<const OtlpJsonSpanRecordable *> spans;
-};
-
-struct ResourceGroup
-{
-  const opentelemetry::sdk::resource::Resource *resource = nullptr;
-  std::vector<ScopeGroup> scopes;
-};
-
-struct ScopePointerHasher
-{
-  std::size_t operator()(const InstrumentationScope *scope) const noexcept
-  {
-    return scope == nullptr ? 0 : scope->HashCode();
-  }
-};
-
-struct ScopePointerEqual
-{
-  bool operator()(const InstrumentationScope *left,
-                  const InstrumentationScope *right) const noexcept
-  {
-    if (left == right)
-    {
-      return true;
-    }
-    if (left == nullptr || right == nullptr)
-    {
-      return false;
-    }
-    return *left == *right;
-  }
-};
-
-std::vector<ResourceGroup> GroupSpans(
-    const opentelemetry::nostd::span<std::unique_ptr<opentelemetry::sdk::trace::Recordable>>
-        &spans) noexcept
-{
-  std::vector<ResourceGroup> groups;
-  // Indices into `groups` and into each group's scopes, so lookup is by hash
-  // while the output order stays the order things were first seen.
-  std::unordered_map<const opentelemetry::sdk::resource::Resource *, std::size_t> resource_index;
-  std::vector<std::unordered_map<const InstrumentationScope *, std::size_t, ScopePointerHasher,
-                                 ScopePointerEqual>>
-      scope_index;
-
-  for (const auto &recordable : spans)
-  {
-    if (recordable == nullptr)
-    {
-      continue;
-    }
-    const auto *span = static_cast<const OtlpJsonSpanRecordable *>(recordable.get());
-
-    const auto *resource = span->GetResource();
-    auto resource_slot   = resource_index.find(resource);
-    if (resource_slot == resource_index.end())
-    {
-      resource_slot = resource_index.emplace(resource, groups.size()).first;
-      groups.push_back(ResourceGroup{resource, {}});
-      scope_index.emplace_back();
-    }
-    ResourceGroup &resource_group = groups[resource_slot->second];
-
-    const auto *scope = span->GetInstrumentationScope();
-    auto &scopes      = scope_index[resource_slot->second];
-    auto scope_slot   = scopes.find(scope);
-    if (scope_slot == scopes.end())
-    {
-      scope_slot = scopes.emplace(scope, resource_group.scopes.size()).first;
-      resource_group.scopes.push_back(ScopeGroup{scope, {}});
-    }
-    resource_group.scopes[scope_slot->second].spans.push_back(span);
-  }
-
-  return groups;
-}
+using ScopeGroup    = detail::ScopeGroup<OtlpJsonSpanRecordable>;
+using ResourceGroup = detail::ResourceGroup<OtlpJsonSpanRecordable>;
 
 }  // namespace
 
@@ -346,7 +261,8 @@ void ConvertSpansToJson(
     const opentelemetry::nostd::span<std::unique_ptr<opentelemetry::sdk::trace::Recordable>>
         &spans) noexcept
 {
-  const std::vector<ResourceGroup> groups = GroupSpans(spans);
+  const std::vector<ResourceGroup> groups =
+      detail::GroupByResourceAndScope<OtlpJsonSpanRecordable>(spans);
 
   // An empty batch sets no field, and a message with no fields set is null.
   if (groups.empty())
@@ -383,11 +299,11 @@ void ConvertSpansToJson(
             writer.Key("scope");
             json_mapping::WriteInstrumentationScope(writer, *scope_group.scope);
           }
-          if (!scope_group.spans.empty())
+          if (!scope_group.items.empty())
           {
             writer.Key("spans");
             writer.BeginArray();
-            for (const OtlpJsonSpanRecordable *span : scope_group.spans)
+            for (const OtlpJsonSpanRecordable *span : scope_group.items)
             {
               WriteSpan(writer, *span);
             }
