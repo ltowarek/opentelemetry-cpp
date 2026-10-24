@@ -1117,10 +1117,16 @@ if(OTELCPP_WITH_OTLP_HTTP)
       "The OTLP/HTTP exporter option structs, shared by the protobuf and OTLP/JSON exporters."
       "opentelemetry_otlp_common opentelemetry_common")
 
+    set(_otlp_http_transport_pc_requires
+        "opentelemetry_api opentelemetry_exporter_otlp_http_options")
+    if(OTELCPP_WITH_HTTP_CLIENT_CURL)
+      string(APPEND _otlp_http_transport_pc_requires
+             " opentelemetry_http_client_curl")
+    endif()
     opentelemetry_add_pkgconfig(
       exporter_otlp_http_transport "OpenTelemetry OTLP - HTTP Transport"
       "The protobuf-free OTLP/HTTP send path."
-      "opentelemetry_api opentelemetry_exporter_otlp_http_options")
+      "${_otlp_http_transport_pc_requires}")
 
     opentelemetry_add_pkgconfig(
       exporter_otlp_json_http_client
