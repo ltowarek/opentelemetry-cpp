@@ -59,6 +59,11 @@ Increment the:
   cannot supply a `JsonWriterFactory` and so a builder without a compiled-in
   backend could only produce an exporter that fails.
 
+* [BUILD] Add `OTELCPP_WITH_OTLP_HTTP_PROTOBUF`, on by default and dependent on
+  `OTELCPP_WITH_OTLP_HTTP`. Setting it off builds only the protobuf-free
+  OTLP/JSON exporters, so nothing in the OTLP/HTTP tree links the protobuf
+  runtime.
+
 * [BUILD] `opentelemetry_exporter_otlp_builder_utils` links
   `opentelemetry_otlp_common` rather than `opentelemetry_otlp_recordable`. It
   includes no protobuf header and touches no recordable, and the old dependency
@@ -97,11 +102,6 @@ Increment the:
   Resource, scope and attribute mapping is shared with traces rather than
   duplicated. The target now also links `opentelemetry_logs`.
 
-* [EXPORTER] Fix the protobuf-free OTLP/JSON mapping emitting an array
-  attribute holding no elements as `{"arrayValue":{"values":[]}}`. The
-  reflection-based converter emits `{"arrayValue":null}`, because the
-  `ArrayValue` it creates has no field set, and the two paths now agree.
-
 * [EXPORTER] Add a protobuf-free read side for OTLP/JSON export responses: a
   `JsonReader` interface with an nlohmann-backed default behind
   `JsonReaderFactory`, in the new `opentelemetry_exporter_otlp_json_reader`
@@ -110,8 +110,8 @@ Increment the:
   where `JsonWriter` is token-shaped, because a response carries only a
   rejected count and an error message. It shares
   `OTELCPP_WITH_JSON_WRITER_NLOHMANN` with the writer, since it shares the
-  backend library. Nothing calls it yet; `OtlpHttpClient` still parses
-  responses with protobuf.
+  backend library. The OTLP/JSON exporters read their partial-success
+  responses through it; `OtlpHttpClient` still parses its own with protobuf.
 
 * [EXPORTER] Add a `JsonWriter` interface for OTLP/JSON serialization, so a
   consumer can supply their own JSON backend in place of the default

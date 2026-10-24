@@ -106,6 +106,8 @@ If building and installing Protobuf and gRPC manually with cmake the
       Windows DLL support.
    - `-DOTELCPP_WITH_OTLP_GRPC=ON` : To enable building OTLP GRPC exporter.
    - `-DOTELCPP_WITH_OTLP_HTTP=ON` : To enable building OTLP HTTP exporter.
+   - `-DOTELCPP_WITH_OTLP_HTTP_PROTOBUF=OFF` : To build only the protobuf-free
+     OTLP/JSON HTTP exporters, leaving the protobuf-based ones out.
    - `-DOTELCPP_WITH_PROMETHEUS=ON` : To enable building prometheus exporter.
    - `-DOTELCPP_INSTALL=ON`: To install `otel-cpp` library needed
       for external code linking.
