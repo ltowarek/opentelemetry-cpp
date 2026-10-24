@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "nlohmann/json.hpp"
+#include "opentelemetry/common/macros.h"
 #include "opentelemetry/exporters/otlp/otlp_json_reader.h"
 #include "opentelemetry/nostd/string_view.h"
 
@@ -103,28 +104,7 @@ public:
   bool GetInt64(nostd::string_view key, std::int64_t &value) noexcept override
   {
     const nlohmann::json *member = Find(key);
-    if (member == nullptr)
-    {
-      return false;
-    }
-    if (member->is_string())
-    {
-      return ParseDecimalInt64(member->get_ref<const std::string &>(), value);
-    }
-    if (member->is_number_integer())
-    {
-      // An unsigned value past the signed range parses as a number but has
-      // no int64 to be read into.
-      if (member->is_number_unsigned() &&
-          member->get<std::uint64_t>() >
-              static_cast<std::uint64_t>((std::numeric_limits<std::int64_t>::max)()))
-      {
-        return false;
-      }
-      value = member->get<std::int64_t>();
-      return true;
-    }
-    return false;
+    return member != nullptr && WithoutEscaping(false, [&] { return ReadInt64(*member, value); });
   }
 
   bool GetString(nostd::string_view key, std::string &value) noexcept override
@@ -139,17 +119,65 @@ public:
   }
 
 private:
+  // nlohmann's find() and get<T>() are not declared noexcept, so the calls that
+  // reach them sit in helpers of their own and an exception answers the way bad
+  // input does: no value.
+  template <typename Result, typename Read>
+  static Result WithoutEscaping(Result fallback, Read read) noexcept
+  {
+#if OPENTELEMETRY_HAVE_EXCEPTIONS
+    try
+    {
+      return read();
+    }
+    catch (...)
+    {
+      return fallback;
+    }
+#else
+    static_cast<void>(fallback);
+    return read();
+#endif
+  }
+
+  static bool ReadInt64(const nlohmann::json &member, std::int64_t &value)
+  {
+    if (member.is_string())
+    {
+      return ParseDecimalInt64(member.get_ref<const std::string &>(), value);
+    }
+    if (member.is_number_integer())
+    {
+      // An unsigned value past the signed range parses as a number but has
+      // no int64 to be read into.
+      if (member.is_number_unsigned() &&
+          member.get<std::uint64_t>() >
+              static_cast<std::uint64_t>((std::numeric_limits<std::int64_t>::max)()))
+      {
+        return false;
+      }
+      value = member.get<std::int64_t>();
+      return true;
+    }
+    return false;
+  }
+
+  const nlohmann::json *Lookup(nostd::string_view key)
+  {
+    // assign() reuses whatever capacity the buffer already has, so a lookup does not
+    // construct a string for the key, which longer field names otherwise do on every call.
+    lookup_key_.assign(key.data(), key.size());
+    const auto it = stack_.back()->find(lookup_key_);
+    return it == stack_.back()->end() ? nullptr : &(*it);
+  }
+
   const nlohmann::json *Find(nostd::string_view key) noexcept
   {
     if (stack_.empty())
     {
       return nullptr;
     }
-    // assign() reuses whatever capacity the buffer already has, so a lookup does not
-    // construct a string for the key, which longer field names otherwise do on every call.
-    lookup_key_.assign(key.data(), key.size());
-    const auto it = stack_.back()->find(lookup_key_);
-    return it == stack_.back()->end() ? nullptr : &(*it);
+    return WithoutEscaping<const nlohmann::json *>(nullptr, [&] { return Lookup(key); });
   }
 
   nlohmann::json root_{nlohmann::json::value_t::discarded};
