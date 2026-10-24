@@ -510,7 +510,9 @@ OtlpHttpTransport::createSession(http_client::Body &&body,
   request->SetSslOptions(options_.ssl_options);
   request->SetTimeoutMs(std::chrono::duration_cast<std::chrono::milliseconds>(options_.timeout));
   request->SetMethod(http_client::Method::Post);
-  request->SetBody(body);
+  // SetBody takes an lvalue reference, so the body needs an owner on this frame.
+  http_client::Body request_body = std::move(body);
+  request->SetBody(request_body);
   request->ReplaceHeader("Content-Type", content_type);
   request->ReplaceHeader("User-Agent", options_.user_agent);
   request->EnableLogging(options_.console_debug);

@@ -94,6 +94,10 @@ public:
                                 const std::shared_ptr<JsonReaderFactory> &json_reader_factory);
 
   ~OtlpJsonHttpLogRecordExporter() override;
+  OtlpJsonHttpLogRecordExporter(const OtlpJsonHttpLogRecordExporter &)            = delete;
+  OtlpJsonHttpLogRecordExporter(OtlpJsonHttpLogRecordExporter &&)                 = delete;
+  OtlpJsonHttpLogRecordExporter &operator=(const OtlpJsonHttpLogRecordExporter &) = delete;
+  OtlpJsonHttpLogRecordExporter &operator=(OtlpJsonHttpLogRecordExporter &&)      = delete;
 
   /**
    * Create a log record recordable.

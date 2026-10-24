@@ -94,6 +94,10 @@ public:
                              const std::shared_ptr<JsonReaderFactory> &json_reader_factory);
 
   ~OtlpJsonHttpMetricExporter() override;
+  OtlpJsonHttpMetricExporter(const OtlpJsonHttpMetricExporter &)            = delete;
+  OtlpJsonHttpMetricExporter(OtlpJsonHttpMetricExporter &&)                 = delete;
+  OtlpJsonHttpMetricExporter &operator=(const OtlpJsonHttpMetricExporter &) = delete;
+  OtlpJsonHttpMetricExporter &operator=(OtlpJsonHttpMetricExporter &&)      = delete;
 
   /**
    * Get the AggregationTemporality for the given instrument type.

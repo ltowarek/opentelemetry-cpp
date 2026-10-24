@@ -35,7 +35,7 @@ using opentelemetry::sdk::instrumentationscope::InstrumentationScope;
 
 // The OTLP Span.SpanKind values. The SDK's SpanKind is a separate enumeration
 // whose order does not match, so the two are mapped rather than cast.
-enum class SpanKindValue : std::int32_t
+enum class SpanKindValue : std::uint8_t
 {
   kUnspecified = 0,
   kInternal    = 1,

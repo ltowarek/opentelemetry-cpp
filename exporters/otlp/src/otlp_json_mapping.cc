@@ -134,89 +134,89 @@ void WriteScalarAnyValue(JsonWriter &writer, nostd::string_view key, WriteScalar
 
 struct OwnedAttributeValueVisitor
 {
-  JsonWriter &writer;
+  JsonWriter *writer_;
 
   void operator()(bool value) const noexcept
   {
-    WriteScalarAnyValue(writer, "boolValue", [&] { writer.WriteBool(value); });
+    WriteScalarAnyValue(*writer_, "boolValue", [&] { writer_->WriteBool(value); });
   }
 
   void operator()(std::int32_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
   }
 
   void operator()(std::uint32_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
   }
 
   void operator()(std::int64_t value) const noexcept
   {
-    WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
   }
 
-  void operator()(std::uint64_t value) const noexcept { WriteUInt64AnyValue(writer, value); }
+  void operator()(std::uint64_t value) const noexcept { WriteUInt64AnyValue(*writer_, value); }
 
   void operator()(double value) const noexcept
   {
-    WriteScalarAnyValue(writer, "doubleValue", [&] { writer.WriteDouble(value); });
+    WriteScalarAnyValue(*writer_, "doubleValue", [&] { writer_->WriteDouble(value); });
   }
 
-  void operator()(const std::string &value) const noexcept { WriteStringAnyValue(writer, value); }
+  void operator()(const std::string &value) const noexcept { WriteStringAnyValue(*writer_, value); }
 
   void operator()(const std::vector<bool> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](bool value) {
-      WriteScalarAnyValue(writer, "boolValue", [&] { writer.WriteBool(value); });
+    WriteArrayAnyValue(*writer_, values, [&](bool value) {
+      WriteScalarAnyValue(*writer_, "boolValue", [&] { writer_->WriteBool(value); });
     });
   }
 
   void operator()(const std::vector<std::int32_t> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](std::int32_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteArrayAnyValue(*writer_, values, [&](std::int32_t value) {
+      WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
     });
   }
 
   void operator()(const std::vector<std::uint32_t> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](std::uint32_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteArrayAnyValue(*writer_, values, [&](std::uint32_t value) {
+      WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
     });
   }
 
   void operator()(const std::vector<std::int64_t> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](std::int64_t value) {
-      WriteScalarAnyValue(writer, "intValue", [&] { WriteInt64String(writer, value); });
+    WriteArrayAnyValue(*writer_, values, [&](std::int64_t value) {
+      WriteScalarAnyValue(*writer_, "intValue", [&] { WriteInt64String(*writer_, value); });
     });
   }
 
   void operator()(const std::vector<std::uint64_t> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values,
-                       [&](std::uint64_t value) { WriteUInt64AnyValue(writer, value); });
+    WriteArrayAnyValue(*writer_, values,
+                       [&](std::uint64_t value) { WriteUInt64AnyValue(*writer_, value); });
   }
 
   void operator()(const std::vector<double> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values, [&](double value) {
-      WriteScalarAnyValue(writer, "doubleValue", [&] { writer.WriteDouble(value); });
+    WriteArrayAnyValue(*writer_, values, [&](double value) {
+      WriteScalarAnyValue(*writer_, "doubleValue", [&] { writer_->WriteDouble(value); });
     });
   }
 
   void operator()(const std::vector<std::string> &values) const noexcept
   {
-    WriteArrayAnyValue(writer, values,
-                       [&](const std::string &value) { WriteStringAnyValue(writer, value); });
+    WriteArrayAnyValue(*writer_, values,
+                       [&](const std::string &value) { WriteStringAnyValue(*writer_, value); });
   }
 
   void operator()(const std::vector<std::uint8_t> &values) const noexcept
   {
     // A byte array is one bytesValue, not an array of them.
-    WriteScalarAnyValue(writer, "bytesValue",
-                        [&] { writer.WriteBytes(values.data(), values.size()); });
+    WriteScalarAnyValue(*writer_, "bytesValue",
+                        [&] { writer_->WriteBytes(values.data(), values.size()); });
   }
 };
 
@@ -279,7 +279,7 @@ void WriteInt64String(JsonWriter &writer, std::int64_t value) noexcept
 void WriteAnyValue(JsonWriter &writer,
                    const opentelemetry::sdk::common::OwnedAttributeValue &value) noexcept
 {
-  opentelemetry::sdk::common::VisitVariant(OwnedAttributeValueVisitor{writer}, value);
+  opentelemetry::sdk::common::VisitVariant(OwnedAttributeValueVisitor{&writer}, value);
 }
 
 void WriteKeyValue(JsonWriter &writer,

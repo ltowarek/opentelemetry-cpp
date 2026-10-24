@@ -93,6 +93,10 @@ public:
                        const std::shared_ptr<JsonReaderFactory> &json_reader_factory);
 
   ~OtlpJsonHttpExporter() override;
+  OtlpJsonHttpExporter(const OtlpJsonHttpExporter &)            = delete;
+  OtlpJsonHttpExporter(OtlpJsonHttpExporter &&)                 = delete;
+  OtlpJsonHttpExporter &operator=(const OtlpJsonHttpExporter &) = delete;
+  OtlpJsonHttpExporter &operator=(OtlpJsonHttpExporter &&)      = delete;
 
   /**
    * Create a span recordable.

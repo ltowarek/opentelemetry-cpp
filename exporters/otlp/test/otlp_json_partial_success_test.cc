@@ -153,21 +153,21 @@ TEST(OtlpJsonPartialSuccess, LogsRejectedCountAndMessageForEachSignal)
 {
   struct Case
   {
-    const OtlpPartialSuccessSignal &signal;
+    const OtlpPartialSuccessSignal *signal;
     const char *body;
     const char *expected;
   };
 
   const Case cases[] = {
-      {OtlpTracePartialSuccessSignal(),
+      {&OtlpTracePartialSuccessSignal(),
        R"({"partialSuccess":{"rejectedSpans":"21","errorMessage":"too many spans!!"}})",
        "[OTLP TRACE HTTP Exporter] Export partial success: 21 span(s) rejected: \"too many "
        "spans!!\""},
-      {OtlpMetricPartialSuccessSignal(),
+      {&OtlpMetricPartialSuccessSignal(),
        R"({"partialSuccess":{"rejectedDataPoints":"7","errorMessage":"too many points!!"}})",
        "[OTLP METRIC HTTP Exporter] Export partial success: 7 data point(s) rejected: \"too many "
        "points!!\""},
-      {OtlpLogPartialSuccessSignal(),
+      {&OtlpLogPartialSuccessSignal(),
        R"({"partialSuccess":{"rejectedLogRecords":"3","errorMessage":"too many logs!!"}})",
        "[OTLP LOG HTTP Exporter] Export partial success: 3 log record(s) rejected: \"too many "
        "logs!!\""},
@@ -177,7 +177,7 @@ TEST(OtlpJsonPartialSuccess, LogsRejectedCountAndMessageForEachSignal)
   {
     ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Error};
     auto reader = MakeReader();
-    EXPECT_TRUE(LogOtlpJsonPartialSuccess(*reader, test_case.body, test_case.signal, 100));
+    EXPECT_TRUE(LogOtlpJsonPartialSuccess(*reader, test_case.body, *test_case.signal, 100));
     EXPECT_TRUE(Contains(log.Drain(), test_case.expected)) << "expected: " << test_case.expected;
   }
 }

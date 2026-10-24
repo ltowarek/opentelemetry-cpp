@@ -51,12 +51,12 @@ bool ParseDecimalInt64(const std::string &text, std::int64_t &value) noexcept
   }
 
   errno                  = 0;
-  const long long parsed = std::strtoll(text.c_str(), nullptr, 10);
+  const std::int64_t parsed = std::strtoll(text.c_str(), nullptr, 10);
   if (errno == ERANGE)
   {
     return false;
   }
-  value = static_cast<std::int64_t>(parsed);
+  value = parsed;
   return true;
 }
 
