@@ -4,6 +4,7 @@
 #include "opentelemetry/exporters/otlp/otlp_json_partial_success.h"
 
 #include <cstddef>
+#include <ostream>
 #include <string>
 
 #include "opentelemetry/exporters/otlp/otlp_json_reader.h"
