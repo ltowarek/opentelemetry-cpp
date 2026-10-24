@@ -94,6 +94,17 @@ void ExpectModelFieldsSurvived(const ExporterOptions &options)
   EXPECT_TRUE(has_header("k2", "v2"));
 }
 
+// The warning is the only sign these exporters give that a node's encoding
+// cannot be honoured, so each signal's builder has to raise it.
+template <typename Entries>
+bool WarnedAboutProtobuf(const Entries &entries)
+{
+  return std::any_of(entries.begin(), entries.end(), [](const auto &entry) {
+    return entry.level == sdk::common::internal_log::LogLevel::Warning &&
+           entry.msg.find("protobuf") != std::string::npos;
+  });
+}
+
 TEST(OtlpJsonHttpBuilder, SpanNodeFieldsSurviveTheMapping)
 {
   configuration::OtlpHttpSpanExporterConfiguration model;
@@ -136,7 +147,7 @@ TEST(OtlpJsonHttpBuilder, LeavesTlsPathsEmptyWhenTheNodeHasNoTlsSection)
   EXPECT_TRUE(options.ssl_client_cert_path.empty());
 }
 
-TEST(OtlpJsonHttpBuilder, WarnsAndStillExportsJsonWhenTheNodeAsksForProtobuf)
+TEST(OtlpJsonHttpBuilder, WarnsAndStillExportsJsonWhenTheSpanNodeAsksForProtobuf)
 {
   configuration::OtlpHttpSpanExporterConfiguration model;
   FillModel(model);
@@ -144,16 +155,35 @@ TEST(OtlpJsonHttpBuilder, WarnsAndStillExportsJsonWhenTheNodeAsksForProtobuf)
 
   ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Warning};
   const auto options = detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpExporterOptions>(model);
-  const auto entries = log.Drain();
 
-  const bool warned = std::any_of(entries.begin(), entries.end(), [](const auto &entry) {
-    return entry.level == sdk::common::internal_log::LogLevel::Warning &&
-           entry.msg.find("protobuf") != std::string::npos;
-  });
-  EXPECT_TRUE(warned);
+  EXPECT_TRUE(WarnedAboutProtobuf(log.Drain()));
 
   // The rest of the node is still honoured; the exporter just emits JSON.
   ExpectModelFieldsSurvived(options);
+}
+
+TEST(OtlpJsonHttpBuilder, WarnsWhenTheMetricNodeAsksForProtobuf)
+{
+  configuration::OtlpHttpPushMetricExporterConfiguration model;
+  FillModel(model);
+  model.encoding = configuration::OtlpHttpEncoding::protobuf;
+
+  ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Warning};
+  detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpMetricExporterOptions>(model);
+
+  EXPECT_TRUE(WarnedAboutProtobuf(log.Drain()));
+}
+
+TEST(OtlpJsonHttpBuilder, WarnsWhenTheLogRecordNodeAsksForProtobuf)
+{
+  configuration::OtlpHttpLogRecordExporterConfiguration model;
+  FillModel(model);
+  model.encoding = configuration::OtlpHttpEncoding::protobuf;
+
+  ScopedTestLogHandler log{sdk::common::internal_log::LogLevel::Warning};
+  detail::MakeOtlpJsonHttpExporterOptions<OtlpHttpLogRecordExporterOptions>(model);
+
+  EXPECT_TRUE(WarnedAboutProtobuf(log.Drain()));
 }
 
 TEST(OtlpJsonHttpBuilder, DoesNotWarnWhenTheNodeAsksForJson)
