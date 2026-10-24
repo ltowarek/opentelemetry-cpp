@@ -122,9 +122,8 @@ bool_flag(
     build_setting_default = True,
 )
 
-# The reader half of the JSON seam. It rides :with_json_writer_nlohmann
-# rather than a flag of its own, because a separate flag would let a consumer
-# exclude the writer backend and still pull nlohmann in through the reader.
+# The reader half of the JSON seam, riding :with_json_writer_nlohmann rather
+# than a flag of its own.
 cc_library(
     name = "otlp_json_reader",
     srcs = select({

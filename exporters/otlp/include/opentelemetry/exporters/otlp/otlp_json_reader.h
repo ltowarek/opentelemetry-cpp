@@ -16,31 +16,25 @@ namespace otlp
 {
 
 /**
- * A minimal JSON accessor, expressed as a document with a cursor rather
- * than as a token stream. The asymmetry with JsonWriter is deliberate:
- * the writer emits unbounded telemetry batches, where a streaming token
- * vocabulary is what keeps peak memory bounded by output size, while the
- * reader consumes an export response whose entire payload is a rejected
- * count and an error message. A pull parser for two fields would be cost
- * with no corresponding benefit, and every backend worth plugging in here
- * already offers a document API.
+ * A minimal JSON accessor, expressed as a document with a cursor rather than
+ * as a token stream. The asymmetry with JsonWriter is deliberate: the writer
+ * emits unbounded telemetry batches, where streaming keeps peak memory bounded
+ * by output size, while the reader consumes an export response whose entire
+ * payload is a rejected count and an error message.
  *
  * The cursor starts at the root object after a successful Parse().
- * EnterObject() descends into a member object and LeaveObject() returns to
- * the parent, so a reader instance never hands out node handles — node
- * identity and ownership are exactly what an abstraction across JSON
- * libraries cannot agree on.
+ * EnterObject() descends into a member object and LeaveObject() returns to the
+ * parent, so a reader instance never hands out node handles — node identity
+ * and ownership are exactly what an abstraction across JSON libraries cannot
+ * agree on.
  *
- * The interface carries no OTLP awareness. That OTLP/JSON may encode a
- * 64-bit integer either as a JSON number or as a decimal string is a
- * property of JSON's own number handling rather than of OTLP, so GetInt64
- * accepts both; which key holds a rejected count is the caller's business.
+ * GetInt64 accepts a JSON number or a decimal string, since encoding a 64-bit
+ * integer either way is a property of JSON's own number handling rather than
+ * of OTLP; which key holds a rejected count is the caller's business.
  *
- * Every method is noexcept. A malformed document, an absent key or a key
- * of the wrong type is reported by a false return, never by an exception,
- * which is required for builds with exceptions disabled. There is no
- * sticky failure flag: unlike a write, where a failure mid-document
- * invalidates everything after it, each read stands alone.
+ * Every method is noexcept, reporting a malformed document, an absent key or a
+ * key of the wrong type by a false return, which builds with exceptions
+ * disabled require. There is no sticky failure flag: each read stands alone.
  */
 class JsonReader
 {

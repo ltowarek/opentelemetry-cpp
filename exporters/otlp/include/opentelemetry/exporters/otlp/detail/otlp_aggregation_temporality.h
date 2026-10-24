@@ -19,17 +19,11 @@ namespace detail
  * How a metric exporter's configured preference turns into the temporality it
  * reports per instrument.
  *
- * This is a decision about the SDK's metric data model, with no bearing on how
- * the data is then encoded, so it lives apart from the encoding: the OTLP/JSON
- * metric exporter has to answer GetAggregationTemporality without linking
- * protobuf, and answering it differently from OtlpMetricUtils -- which
- * delegates here -- would make two exporters of the same signal disagree about
- * what the collector receives.
- *
- * Inline rather than a library so that neither side takes a link dependency on
- * the other to ask the question, and under detail/ because it is that sharing
- * mechanism rather than API: unpublishing a header is harder than promoting
- * one.
+ * Kept apart from the encoding, and inline rather than a library, so the
+ * OTLP/JSON metric exporter can answer GetAggregationTemporality without
+ * linking protobuf or a dependency on the other side; OtlpMetricUtils delegates
+ * here, so two exporters of the same signal cannot disagree about what the
+ * collector receives.
  */
 
 inline sdk::metrics::AggregationTemporality SelectDeltaTemporality(

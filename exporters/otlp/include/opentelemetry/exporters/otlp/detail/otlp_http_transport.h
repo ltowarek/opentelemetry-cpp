@@ -34,20 +34,14 @@ namespace detail
  * Posts a finished request body to an OTLP endpoint and hands the response
  * bytes back, without referencing protobuf.
  *
- * This is everything OtlpHttpClient does apart from producing the request
- * body and parsing the response into a message: the session pool and its
- * garbage collection, the concurrency counter, the cached parsed URI, retry
- * policy, compression, ForceFlush and Shutdown. OtlpHttpClient is this type
- * plus a protobuf message on either end, and delegates rather than repeating
- * any of it, so the two paths cannot drift.
+ * This is everything OtlpHttpClient does apart from producing the request body
+ * and parsing the response into a message, and OtlpHttpClient delegates rather
+ * than repeating any of it, so the two paths cannot drift. It lives in a build
+ * target that does not link protobuf, which is what lets the OTLP/JSON
+ * exporters shed the message runtime.
  *
- * It lives in a build target that does not link protobuf, which is what lets
- * the OTLP/JSON exporters shed the message runtime rather than merely avoiding
- * it in their own source.
- *
- * Not public API. The header is under detail/ because only in-repo exporters
- * are meant to use it, but unlike most detail/ headers it is consumed across
- * target boundaries.
+ * Not public API, but unlike most detail/ headers it is consumed across target
+ * boundaries.
  */
 class OtlpHttpTransport
 {

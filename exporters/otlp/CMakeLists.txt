@@ -185,10 +185,8 @@ endif()
 # opentelemetry_exporter_otlp_json_reader
 #
 # The reader half of the JSON seam, laid out exactly like the writer: a
-# header-only facade plus a selectable backend. It rides
-# OTELCPP_WITH_JSON_WRITER_NLOHMANN rather than an option of its own, because a
-# separate option would let a consumer exclude the writer backend and still pull
-# nlohmann in through the reader.
+# header-only facade plus a selectable backend, riding
+# OTELCPP_WITH_JSON_WRITER_NLOHMANN rather than an option of its own.
 #
 
 add_library(opentelemetry_exporter_otlp_json_reader INTERFACE)

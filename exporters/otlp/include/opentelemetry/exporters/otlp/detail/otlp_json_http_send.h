@@ -25,11 +25,9 @@ namespace detail
  * Posts a finished OTLP/JSON request body and reports what came back.
  *
  * What the three signals share once their data is encoded: the failure log
- * line, reading the response for a partial success, and -- because the
- * transport reports the HTTP exchange alone -- capturing the result the
- * response reading settled on, so that a synchronous export reports a body it
- * could not read as a failure rather than a success. Only the wording and the
- * rejected-count key differ, and those arrive in `signal`.
+ * line, reading the response for a partial success, and capturing the result
+ * that reading settled on. Only the wording and the rejected-count key differ,
+ * and those arrive in `signal`.
  *
  * @param transport the send path to post through
  * @param reader_factory used to read the response body, once per export; held for the
